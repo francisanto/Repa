@@ -21,11 +21,13 @@ export function RozaryoPayModal({ isOpen, onClose, amount, eventName, onSuccess 
   useEffect(() => {
     if (isOpen) {
       setStep("processing");
-      // Simulate payment processing time
+      // Simulate payment processing time (in real app, this would be actual payment gateway)
       const timer = setTimeout(() => {
         setStep("success");
-      }, 3000);
+      }, 2500);
       return () => clearTimeout(timer);
+    } else {
+      setStep("processing");
     }
   }, [isOpen]);
 
@@ -45,14 +47,20 @@ export function RozaryoPayModal({ isOpen, onClose, amount, eventName, onSuccess 
           className="bg-white rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5"
         >
           {/* Header Brand */}
-          <div className="bg-[#3395ff] px-6 py-4 flex items-center justify-between text-white">
+          <div className="bg-gradient-to-r from-[#3395ff] to-[#2563eb] px-6 py-4 flex items-center justify-between text-white shadow-lg">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-white/20 flex items-center justify-center font-bold">R</div>
-              <span className="font-bold tracking-wide">RozaryoPay</span>
+              <motion.div 
+                className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center font-bold"
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                R
+              </motion.div>
+              <span className="font-bold tracking-wide text-lg">RozaryoPay</span>
             </div>
-            <div className="flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded">
+            <div className="flex items-center gap-1 text-xs bg-white/20 backdrop-blur px-3 py-1.5 rounded-full border border-white/30">
               <Lock className="w-3 h-3" />
-              Secured
+              <span className="font-medium">Secured</span>
             </div>
           </div>
 

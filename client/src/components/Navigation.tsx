@@ -24,11 +24,18 @@ export function Navigation() {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold font-display text-primary flex items-center gap-2">
-          <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center text-sm">CR</span>
-          ClassRep
-        </h1>
+      <div className="p-6 border-b border-slate-100">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          className="flex items-center gap-2"
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-cyan-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-lg shadow-primary/30">
+            CR
+          </div>
+          <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+            ClassRep
+          </h1>
+        </motion.div>
       </div>
       
       <div className="flex-1 px-4 space-y-2">
@@ -37,15 +44,29 @@ export function Navigation() {
           const isActive = location === link.href;
           
           return (
-            <Link key={link.href} href={link.href} className={`
-              flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-              ${isActive 
-                ? "bg-primary text-white shadow-lg shadow-primary/25 translate-x-1" 
-                : "text-slate-600 hover:bg-white hover:shadow-md hover:text-primary"}
-            `}>
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{link.label}</span>
-            </Link>
+            <motion.div
+              key={link.href}
+              whileHover={{ x: isActive ? 0 : 4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Link href={link.href} className={`
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative
+                ${isActive 
+                  ? "bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/30" 
+                  : "text-slate-600 hover:bg-blue-50 hover:text-primary hover:shadow-md"}
+              `}>
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{link.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute right-2 w-2 h-2 bg-white rounded-full"
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  )}
+              </Link>
+            </motion.div>
           );
         })}
       </div>
@@ -101,7 +122,7 @@ export function Navigation() {
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:block w-64 fixed inset-y-0 left-0 border-r border-slate-200 bg-white/50 backdrop-blur-md">
+      <div className="hidden md:block w-64 fixed inset-y-0 left-0 border-r border-slate-200 bg-white/80 backdrop-blur-xl shadow-xl">
         <NavContent />
       </div>
     </>

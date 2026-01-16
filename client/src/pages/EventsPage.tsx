@@ -166,36 +166,53 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events?.map((event) => (
-            <Card key={event.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-md overflow-hidden">
-              <div className="h-2 bg-gradient-to-r from-primary to-cyan-500" />
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
-                    <CalendarIcon className="w-6 h-6" />
+          {events?.map((event, index) => (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -5 }}
+            >
+              <Card className="group hover:shadow-2xl transition-all duration-300 border-none shadow-lg overflow-hidden bg-white/90 backdrop-blur">
+                <div className="h-3 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <motion.div 
+                      className="w-14 h-14 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl flex items-center justify-center text-primary shadow-md group-hover:scale-110 transition-transform"
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <CalendarIcon className="w-7 h-7" />
+                    </motion.div>
+                    {event.isPaymentRequired && (
+                      <motion.span 
+                        className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm"
+                        whileHover={{ scale: 1.1 }}
+                      >
+                        <IndianRupee className="w-3 h-3" /> {event.amount}
+                      </motion.span>
+                    )}
                   </div>
-                  {event.isPaymentRequired && (
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <IndianRupee className="w-3 h-3" /> {event.amount}
-                    </span>
-                  )}
-                </div>
-                
-                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary transition-colors">{event.title}</h3>
-                <p className="text-slate-500 text-sm mb-4 line-clamp-2">{event.description}</p>
-                
-                <div className="space-y-2 text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-slate-400" />
-                    {format(new Date(event.date), "PPP p")}
+                  
+                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary transition-colors">
+                    {event.title}
+                  </h3>
+                  <p className="text-slate-500 text-sm mb-4 line-clamp-2">{event.description}</p>
+                  
+                  <div className="space-y-2 text-sm text-slate-600 pt-4 border-t border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="w-4 h-4 text-primary" />
+                      <span className="font-medium">{format(new Date(event.date), "PPP p")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <span>{event.location || "TBD"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                    {event.location || "TBD"}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
           {!events?.length && (
             <div className="col-span-full text-center py-12 text-slate-500 bg-white rounded-xl border border-dashed border-slate-200">

@@ -11,7 +11,7 @@ import { openai } from "./replit_integrations/image"; // Re-using openai client 
 import { students, events, registrations, timetables } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-// Simple Levenshtein distance for fuzzy matching
+// Enhanced fuzzy matching with multiple algorithms
 function levenshtein(a: string, b: string): number {
   const matrix = [];
   for (let i = 0; i <= b.length; i++) {
@@ -33,6 +33,107 @@ function levenshtein(a: string, b: string): number {
     }
   }
   return matrix[b.length][a.length];
+}
+
+// Jaro-Winkler similarity for better name matching
+function jaroWinkler(s1: string, s2: string): number {
+  const jaro = jaroDistance(s1, s2);
+  const prefixLength = commonPrefixLength(s1, s2, 4);
+  return jaro + (0.1 * prefixLength * (1 - jaro));
+}
+
+function jaroDistance(s1: string, s2: string): number {
+  if (s1 === s2) return 1.0;
+  if (s1.length === 0 || s2.length === 0) return 0.0;
+
+  const matchWindow = Math.floor(Math.max(s1.length, s2.length) / 2) - 1;
+  const s1Matches = new Array(s1.length).fill(false);
+  const s2Matches = new Array(s2.length).fill(false);
+
+  let matches = 0;
+  let transpositions = 0;
+
+  for (let i = 0; i < s1.length; i++) {
+    const start = Math.max(0, i - matchWindow);
+    const end = Math.min(i + matchWindow + 1, s2.length);
+
+    for (let j = start; j < end; j++) {
+      if (s2Matches[j] || s1[i] !== s2[j]) continue;
+      s1Matches[i] = true;
+      s2Matches[j] = true;
+      matches++;
+      break;
+    }
+  }
+
+  if (matches === 0) return 0.0;
+
+  let k = 0;
+  for (let i = 0; i < s1.length; i++) {
+    if (!s1Matches[i]) continue;
+    while (!s2Matches[k]) k++;
+    if (s1[i] !== s2[k]) transpositions++;
+    k++;
+  }
+
+  return (matches / s1.length + matches / s2.length + (matches - transpositions / 2) / matches) / 3.0;
+}
+
+function commonPrefixLength(s1: string, s2: string, maxLength: number): number {
+  let prefix = 0;
+  for (let i = 0; i < Math.min(maxLength, s1.length, s2.length); i++) {
+    if (s1[i] === s2[i]) prefix++;
+    else break;
+  }
+  return prefix;
+}
+
+// Enhanced name matching with multiple algorithms
+function findBestMatch(inputName: string, students: any[]): { student: any; score: number; method: string } | null {
+  const normalizedInput = inputName.toLowerCase().trim();
+  let bestMatch = null;
+  let bestScore = 0;
+  let bestMethod = "";
+
+  for (const student of students) {
+    const normalizedStudentName = student.name.toLowerCase().trim();
+    
+    // Exact match
+    if (normalizedInput === normalizedStudentName) {
+      return { student, score: 1.0, method: "exact" };
+    }
+
+    // Jaro-Winkler (better for names)
+    const jwScore = jaroWinkler(normalizedInput, normalizedStudentName);
+    if (jwScore > bestScore && jwScore > 0.85) {
+      bestScore = jwScore;
+      bestMatch = student;
+      bestMethod = "jaro-winkler";
+    }
+
+    // Levenshtein distance (normalized)
+    const maxLen = Math.max(normalizedInput.length, normalizedStudentName.length);
+    const levDistance = levenshtein(normalizedInput, normalizedStudentName);
+    const levScore = 1 - (levDistance / maxLen);
+    
+    if (levScore > bestScore && levScore > 0.7 && (!bestMatch || levScore > jwScore)) {
+      bestScore = levScore;
+      bestMatch = student;
+      bestMethod = "levenshtein";
+    }
+
+    // Contains check (fallback)
+    if (normalizedStudentName.includes(normalizedInput) || normalizedInput.includes(normalizedStudentName)) {
+      const containsScore = 0.6;
+      if (containsScore > bestScore && !bestMatch) {
+        bestScore = containsScore;
+        bestMatch = student;
+        bestMethod = "contains";
+      }
+    }
+  }
+
+  return bestMatch ? { student: bestMatch, score: bestScore, method: bestMethod } : null;
 }
 
 export async function registerRoutes(
@@ -129,50 +230,135 @@ export async function registerRoutes(
     }
   });
 
-  // === REGISTRATIONS API (With Fuzzy Match) ===
+  // === GOOGLE SHEETS IMPORT ===
+  app.post(api.students.importFromGoogleSheets.path, async (req, res) => {
+    try {
+      const { sheetUrl, sheetName } = api.students.importFromGoogleSheets.input.parse(req.body);
+      
+      // Extract Google Sheets ID from URL
+      const sheetIdMatch = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!sheetIdMatch) {
+        return res.status(400).json({ message: "Invalid Google Sheets URL" });
+      }
+      
+      const sheetId = sheetIdMatch[1];
+      const range = sheetName ? `${sheetName}!A:Z` : "Sheet1!A:Z";
+      
+      // Fetch data from Google Sheets (public sheet or using API key)
+      // For public sheets, we can use the CSV export URL
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName || "Sheet1"}`;
+      
+      try {
+        const response = await fetch(csvUrl);
+        if (!response.ok) {
+          throw new Error("Failed to fetch sheet data. Make sure the sheet is publicly accessible.");
+        }
+        
+        const csvText = await response.text();
+        const lines = csvText.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          return res.status(400).json({ message: "Sheet appears to be empty or has no data rows" });
+        }
+        
+        // Parse CSV (simple parser - assumes comma-separated)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const studentsData: any[] = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          if (values.length === 0 || !values[0]) continue; // Skip empty rows
+          
+          // Try to map common column names
+          const nameIndex = headers.findIndex(h => 
+            /name|full.?name|student.?name/i.test(h)
+          );
+          const rollNoIndex = headers.findIndex(h => 
+            /roll|roll.?no|roll.?number|id|student.?id/i.test(h)
+          );
+          const batchIndex = headers.findIndex(h => 
+            /batch|class|section/i.test(h)
+          );
+          const emailIndex = headers.findIndex(h => 
+            /email/i.test(h)
+          );
+          const phoneIndex = headers.findIndex(h => 
+            /phone|mobile|contact/i.test(h)
+          );
+          
+          if (nameIndex === -1 || rollNoIndex === -1) {
+            continue; // Skip rows without required fields
+          }
+          
+          studentsData.push({
+            name: values[nameIndex] || "",
+            rollNo: values[rollNoIndex] || "",
+            batch: values[batchIndex] || "Default",
+            email: values[emailIndex] || null,
+            phone: values[phoneIndex] || null,
+          });
+        }
+        
+        if (studentsData.length === 0) {
+          return res.status(400).json({ message: "No valid student data found in sheet" });
+        }
+        
+        // Bulk create students
+        const created = await storage.bulkCreateStudents(studentsData);
+        
+        res.status(201).json({
+          imported: created.length,
+          students: created,
+        });
+      } catch (fetchError: any) {
+        return res.status(400).json({ 
+          message: `Failed to import from Google Sheets: ${fetchError.message}. Make sure the sheet is publicly accessible (File > Share > Anyone with the link can view).` 
+        });
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  // === REGISTRATIONS API (With Enhanced Fuzzy Match) ===
   app.post(api.registrations.create.path, async (req, res) => {
     try {
       const { eventId, studentName } = api.registrations.create.input.parse(req.body);
       
-      // 1. Fuzzy Match Logic
+      // 1. Enhanced Fuzzy Match Logic
       const allStudents = await storage.getStudents();
-      let bestMatch = null;
-      let minDistance = Infinity;
+      const matchResult = findBestMatch(studentName, allStudents);
 
-      // Normalize input name
-      const normalizedInput = studentName.toLowerCase().trim();
-
-      for (const student of allStudents) {
-        const normalizedStudentName = student.name.toLowerCase().trim();
-        const distance = levenshtein(normalizedInput, normalizedStudentName);
-        
-        // Threshold for match (e.g. distance < 3 or < 20% of length)
-        if (distance < minDistance) {
-          minDistance = distance;
-          bestMatch = student;
-        }
-      }
-
-      // Check if match is good enough (simple heuristic: distance <= 3 for now)
-      if (!bestMatch || minDistance > 3) {
-        return res.status(404).json({ message: "Student not found. Please check spelling." });
+      if (!matchResult || matchResult.score < 0.7) {
+        return res.status(404).json({ 
+          message: "Student not found. Please check spelling or contact your representative.",
+          suggestions: allStudents.slice(0, 3).map(s => s.name)
+        });
       }
 
       // 2. Check if already registered
-      const existingReg = await storage.getRegistrationByStudentAndEvent(bestMatch.id, eventId);
+      const existingReg = await storage.getRegistrationByStudentAndEvent(matchResult.student.id, eventId);
       if (existingReg) {
-          return res.status(400).json({ message: `Already registered as ${bestMatch.name}` });
+          return res.status(400).json({ message: `Already registered as ${matchResult.student.name}` });
       }
 
       // 3. Create Registration
       const registration = await storage.createRegistration({
         eventId,
-        studentId: bestMatch.id,
+        studentId: matchResult.student.id,
         status: "registered",
         paymentId: null, // Initial registration
       });
 
-      res.status(201).json({ ...registration, studentName: bestMatch.name });
+      res.status(201).json({ 
+        ...registration, 
+        studentName: matchResult.student.name,
+        matchConfidence: matchResult.score,
+        matchMethod: matchResult.method
+      });
 
     } catch (err) {
       if (err instanceof z.ZodError) {

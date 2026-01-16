@@ -75,6 +75,21 @@ export const api = {
             201: z.array(z.custom<typeof students.$inferSelect>()),
             400: errorSchemas.validation,
         }
+    },
+    importFromGoogleSheets: {
+        method: 'POST' as const,
+        path: '/api/students/import-sheets',
+        input: z.object({
+            sheetUrl: z.string().url(),
+            sheetName: z.string().optional(),
+        }),
+        responses: {
+            201: z.object({
+                imported: z.number(),
+                students: z.array(z.custom<typeof students.$inferSelect>()),
+            }),
+            400: errorSchemas.validation,
+        }
     }
   },
   events: {

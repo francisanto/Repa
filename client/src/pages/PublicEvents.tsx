@@ -2,7 +2,7 @@ import { useEvents, useRegisterForEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Calendar, MapPin, Loader2, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -27,13 +27,36 @@ export default function PublicEvents() {
   const handleNameSubmit = async () => {
     if (!studentName) return;
     
-    // Check if payment required
-    if (selectedEvent.isPaymentRequired) {
-      // In a real app, we'd verify the student exists first before showing payment
-      // For now, we simulate the flow
-      setShowPayment(true);
-    } else {
-      await processRegistration();
+    // First verify the student exists (with fuzzy matching)
+    try {
+      // This will be handled by the registration endpoint which does fuzzy matching
+      // For payment events, we'll verify first, then show payment
+      if (selectedEvent.isPaymentRequired) {
+        // Verify student exists before showing payment
+        const verifyRes = await fetch(`/api/students?search=${encodeURIComponent(studentName)}`, {
+          credentials: "include"
+        });
+        const students = await verifyRes.json();
+        
+        if (students.length === 0) {
+          toast({ 
+            title: "Student Not Found", 
+            description: "Please check your name spelling or contact your representative.",
+            variant: "destructive" 
+          });
+          return;
+        }
+        
+        setShowPayment(true);
+      } else {
+        await processRegistration();
+      }
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to verify student. Please try again.",
+        variant: "destructive" 
+      });
     }
   };
 
@@ -107,24 +130,48 @@ export default function PublicEvents() {
 
       {/* Registration Dialog */}
       <Dialog open={!!selectedEvent && !showPayment} onOpenChange={(open) => !open && setSelectedEvent(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Register for {selectedEvent?.title}</DialogTitle>
-            <DialogDescription>Enter your name to confirm your identity.</DialogDescription>
+            <DialogTitle className="text-2xl">Register for {selectedEvent?.title}</DialogTitle>
+            <DialogDescription>
+              Enter your name to confirm your identity. Our AI will match it with student records.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Full Name</Label>
+              <Label className="text-sm font-semibold">Full Name</Label>
               <Input 
                 placeholder="e.g. John Doe" 
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
+                className="rounded-xl border-slate-200 focus:ring-primary/20"
               />
-              <p className="text-xs text-slate-500">We'll match this with our student records.</p>
+              <div className="flex items-start gap-2 text-xs text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                <p>Our smart matching system will find you even with minor spelling variations.</p>
+              </div>
             </div>
-            <Button className="w-full" onClick={handleNameSubmit} disabled={!studentName}>
-              Proceed
+            <Button 
+              className="w-full rounded-xl bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90 shadow-lg shadow-primary/20" 
+              onClick={handleNameSubmit} 
+              disabled={!studentName || isPending}
+              size="lg"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify & Continue"
+              )}
             </Button>
+            {selectedEvent?.isPaymentRequired && (
+              <p className="text-xs text-center text-slate-500">
+                Payment of ₹{selectedEvent.amount} will be required after verification
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

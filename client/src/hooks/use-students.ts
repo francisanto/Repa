@@ -99,3 +99,25 @@ export function useBulkCreateStudents() {
     }
   });
 }
+
+export function useImportFromGoogleSheets() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { sheetUrl: string; sheetName?: string }) => {
+        const res = await fetch(api.students.importFromGoogleSheets.path, {
+            method: api.students.importFromGoogleSheets.method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+            credentials: "include",
+        });
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.message || "Failed to import from Google Sheets");
+        }
+        return api.students.importFromGoogleSheets.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
+    }
+  });
+}

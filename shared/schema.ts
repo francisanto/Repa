@@ -1,18 +1,86 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// Export everything from auth and chat models
+export * from "./models/auth";
+export * from "./models/chat";
+
+// === TABLE DEFINITIONS ===
+
+export const students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  rollNo: text("roll_no").notNull().unique(),
+  email: text("email"),
+  phone: text("phone"),
+  batch: text("batch").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  date: timestamp("date").notNull(),
+  location: text("location"),
+  amount: integer("amount").default(0), // Amount in cents/paise
+  isPaymentRequired: boolean("is_payment_required").default(false),
+  organizerId: text("organizer_id").notNull(), // Links to auth user
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const registrations = pgTable("registrations", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  studentId: integer("student_id").notNull(),
+  status: text("status").default("registered"), // registered, paid, cancelled
+  paymentId: text("payment_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const timetables = pgTable("timetables", {
+  id: serial("id").primaryKey(),
+  batch: text("batch").notNull(),
+  content: jsonb("content").notNull(), // Structure: { [day]: [ { time, subject, room } ] }
+  uploadedBy: text("uploaded_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === SCHEMAS ===
+
+export const insertStudentSchema = createInsertSchema(students).omit({ id: true, createdAt: true });
+export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
+export const insertRegistrationSchema = createInsertSchema(registrations).omit({ id: true, createdAt: true });
+export const insertTimetableSchema = createInsertSchema(timetables).omit({ id: true, createdAt: true });
+
+// === TYPES ===
+
+export type Student = typeof students.$inferSelect;
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+export type Registration = typeof registrations.$inferSelect;
+export type InsertRegistration = z.infer<typeof insertRegistrationSchema>;
+
+export type Timetable = typeof timetables.$inferSelect;
+export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
+
+// Request Types
+export type CreateStudentRequest = InsertStudent;
+export type CreateEventRequest = InsertEvent;
+export type CreateRegistrationRequest = InsertRegistration;
+export type UploadTimetableRequest = { batch: string; file: string }; // File as base64 or handled via upload endpoint
+
+// Response Types
+export type StudentResponse = Student;
+export type EventResponse = Event;
+export type RegistrationResponse = Registration & { studentName?: string; eventTitle?: string };
+
+// Search/Filter Types
+export interface StudentQueryParams {
+  search?: string;
+  batch?: string;
+}

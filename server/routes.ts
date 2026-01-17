@@ -8,35 +8,13 @@ import { registerChatRoutes } from "./replit_integrations/chat";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { getOpenAI } from "./replit_integrations/image"; // Re-using getOpenAI from image integration
-import { students, events, registrations, timetables } from "@shared/schema";
-import { eq } from "drizzle-orm";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
+import { pool } from "./db";
 import Razorpay from "razorpay";
 import * as crypto from "crypto";
-
-// Enhanced fuzzy matching with multiple algorithms
-function levenshtein(a: string, b: string): number {
-  const matrix = [];
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) == a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
-        );
-      }
-    }
-  }
-  return matrix[b.length][a.length];
-}
+import { students, events, registrations, timetables } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 // Jaro-Winkler similarity for better name matching
 function jaroWinkler(s1: string, s2: string): number {
@@ -143,12 +121,22 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Simple session-based auth (no Replit Auth)
+  const PostgresStore = pgSession(session);
+
   app.use(session({
+    store: new PostgresStore({
+      pool: pool as any,
+      tableName: "session"
+    }),
     secret: process.env.SESSION_SECRET || "classrep-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+    cookie: { 
+      secure: false, 
+      httpOnly: true, 
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax"
+    }
   }));
 
   // Initialize Razorpay (default MID: S4yrsJtpeiuw2a)
@@ -711,16 +699,18 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Event not found" });
       }
 
+      const eventAmount = event.amount || 0;
+
       // 4. Create Registration
       const registration = await storage.createRegistration({
         eventId,
         studentId: matchResult.student.id,
-        status: event.amount > 0 && !paymentId ? "registered" : "paid",
+        status: eventAmount > 0 && !paymentId ? "registered" : "paid",
         paymentId: paymentId || null,
         razorpayOrderId: orderId || null,
         razorpayPaymentId: paymentId || null,
-        amount: event.amount || 0,
-        paymentStatus: event.amount > 0 && paymentId ? "paid" : event.amount > 0 ? "pending" : null,
+        amount: eventAmount,
+        paymentStatus: eventAmount > 0 && paymentId ? "paid" : eventAmount > 0 ? "pending" : null,
       });
 
       res.status(201).json({ 

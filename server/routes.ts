@@ -3,13 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+// import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth"; // Not using Replit Auth anymore
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
 import { getOpenAI } from "./replit_integrations/image"; // Re-using getOpenAI from image integration
 import { students, events, registrations, timetables } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import session from "express-session";
 
 // Enhanced fuzzy matching with multiple algorithms
 function levenshtein(a: string, b: string): number {
@@ -140,9 +141,104 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Setup Integrations
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  // Simple session-based auth (no Replit Auth)
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "classrep-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+  }));
+
+  // === AUTH API (Simple ID/Password) ===
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { representativeId, password, name, email } = req.body;
+      
+      if (!representativeId || !password || !name) {
+        return res.status(400).json({ message: "Representative ID, password, and name are required" });
+      }
+
+      // Check if representative already exists
+      const existing = await storage.getRepresentative(representativeId);
+      if (existing) {
+        return res.status(400).json({ message: "Representative ID already exists" });
+      }
+
+      // Simple password storage (in production, use bcrypt)
+      const rep = await storage.createRepresentative({
+        representativeId,
+        password, // In production: await bcrypt.hash(password, 10)
+        name,
+        email: email || null,
+      });
+
+      // Auto-login after registration
+      (req.session as any).userId = rep.id;
+      (req.session as any).representativeId = rep.representativeId;
+      (req.session as any).name = rep.name;
+
+      res.status(201).json({ 
+        id: rep.id,
+        representativeId: rep.representativeId,
+        name: rep.name,
+        email: rep.email
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { representativeId, password } = req.body;
+      
+      if (!representativeId || !password) {
+        return res.status(400).json({ message: "Representative ID and password are required" });
+      }
+
+      const rep = await storage.getRepresentative(representativeId);
+      if (!rep || rep.password !== password) { // In production: await bcrypt.compare(password, rep.password)
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Set session
+      (req.session as any).userId = rep.id;
+      (req.session as any).representativeId = rep.representativeId;
+      (req.session as any).name = rep.name;
+
+      res.json({ 
+        id: rep.id,
+        representativeId: rep.representativeId,
+        name: rep.name,
+        email: rep.email
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session?.destroy(() => {
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    const session = req.session as any;
+    if (session?.userId) {
+      res.json({
+        id: session.userId,
+        representativeId: session.representativeId,
+        name: session.name,
+      });
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+
+  // Setup Integrations (keeping for other features, but not using Replit Auth)
+  // await setupAuth(app);
+  // registerAuthRoutes(app);
   registerChatRoutes(app);
   registerAudioRoutes(app);
   registerImageRoutes(app);

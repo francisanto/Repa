@@ -1,11 +1,11 @@
 import {
-  students, events, registrations, timetables,
+  students, events, registrations, timetables, representatives,
   type Student, type InsertStudent,
   type Event, type InsertEvent,
   type Registration, type InsertRegistration,
-  type Timetable, type InsertTimetable
+  type Timetable, type InsertTimetable,
+  type Representative, type InsertRepresentative
 } from "@shared/schema";
-import { db } from "./db";
 import { eq, ilike, or, and } from "drizzle-orm";
 
 export interface IStorage {
@@ -30,11 +30,22 @@ export interface IStorage {
   // Timetables
   getTimetables(): Promise<Timetable[]>;
   createTimetable(timetable: InsertTimetable): Promise<Timetable>;
+
+  // Representatives
+  getRepresentative(representativeId: string): Promise<Representative | undefined>;
+  createRepresentative(rep: InsertRepresentative): Promise<Representative>;
 }
 
 export class DatabaseStorage implements IStorage {
+  private getDb() {
+    // Lazy import to avoid error when DATABASE_URL is not set
+    const { db } = require("./db");
+    return db;
+  }
+
   // Students
   async getStudents(search?: string, batch?: string): Promise<Student[]> {
+    const db = this.getDb();
     let query = db.select().from(students);
     const conditions = [];
     
@@ -57,74 +68,103 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStudent(id: number): Promise<Student | undefined> {
+    const db = this.getDb();
     const [student] = await db.select().from(students).where(eq(students.id, id));
     return student;
   }
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
+    const db = this.getDb();
     const [student] = await db.insert(students).values(insertStudent).returning();
     return student;
   }
 
   async updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student> {
+    const db = this.getDb();
     const [updated] = await db.update(students).set(updates).where(eq(students.id, id)).returning();
     return updated;
   }
 
   async deleteStudent(id: number): Promise<void> {
+    const db = this.getDb();
     await db.delete(students).where(eq(students.id, id));
   }
 
   async bulkCreateStudents(studentsData: InsertStudent[]): Promise<Student[]> {
-      return await db.insert(students).values(studentsData).returning();
+    const db = this.getDb();
+    return await db.insert(students).values(studentsData).returning();
   }
 
   // Events
   async getEvents(): Promise<Event[]> {
+    const db = this.getDb();
     return db.select().from(events);
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
+    const db = this.getDb();
     const [event] = await db.select().from(events).where(eq(events.id, id));
     return event;
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const db = this.getDb();
     const [event] = await db.insert(events).values(insertEvent).returning();
     return event;
   }
 
   // Registrations
   async createRegistration(insertRegistration: InsertRegistration): Promise<Registration> {
+    const db = this.getDb();
     const [registration] = await db.insert(registrations).values(insertRegistration).returning();
     return registration;
   }
 
   async getRegistrations(eventId?: number): Promise<Registration[]> {
-      if (eventId) {
-          return db.select().from(registrations).where(eq(registrations.eventId, eventId));
-      }
-      return db.select().from(registrations);
+    const db = this.getDb();
+    if (eventId) {
+        return db.select().from(registrations).where(eq(registrations.eventId, eventId));
+    }
+    return db.select().from(registrations);
   }
 
   async getRegistrationByStudentAndEvent(studentId: number, eventId: number): Promise<Registration | undefined> {
-      const [reg] = await db.select().from(registrations)
-        .where(and(
-            eq(registrations.studentId, studentId),
-            eq(registrations.eventId, eventId)
-        ));
-      return reg;
+    const db = this.getDb();
+    const [reg] = await db.select().from(registrations)
+      .where(and(
+          eq(registrations.studentId, studentId),
+          eq(registrations.eventId, eventId)
+      ));
+    return reg;
   }
 
   // Timetables
   async getTimetables(): Promise<Timetable[]> {
+    const db = this.getDb();
     return db.select().from(timetables);
   }
 
   async createTimetable(insertTimetable: InsertTimetable): Promise<Timetable> {
+    const db = this.getDb();
     const [timetable] = await db.insert(timetables).values(insertTimetable).returning();
     return timetable;
   }
+
+  // Representatives
+  async getRepresentative(representativeId: string): Promise<Representative | undefined> {
+    const db = this.getDb();
+    const [rep] = await db.select().from(representatives).where(eq(representatives.representativeId, representativeId));
+    return rep;
+  }
+
+  async createRepresentative(rep: InsertRepresentative): Promise<Representative> {
+    const db = this.getDb();
+    const [newRep] = await db.insert(representatives).values(rep).returning();
+    return newRep;
+  }
 }
 
-export const storage = new DatabaseStorage();
+// Use memory storage for testing without database
+// Change to DatabaseStorage() when you want to use database
+import { MemoryStorage } from "./memory-storage";
+export const storage = new MemoryStorage();

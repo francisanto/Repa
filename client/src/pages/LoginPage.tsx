@@ -1,14 +1,57 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { LogIn, UserPlus, Sparkles, ArrowRight } from "lucide-react";
+import { LogIn, UserPlus, ArrowRight, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
+  const [representativeId, setRepresentativeId] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  // Redirect if already logged in
+  if (user) {
+    setLocation("/dashboard");
+    return null;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!representativeId || !password) {
+      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ representativeId, password }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      toast({ title: "Success", description: "Logged in successfully!" });
+      setLocation("/dashboard");
+    } catch (error: any) {
+      toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,19 +95,55 @@ export default function LoginPage() {
               Sign in to manage your class activities
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                onClick={handleLogin}
-                className="w-full bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90 text-white shadow-lg shadow-primary/20 h-12 text-lg font-semibold"
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="representativeId">Representative ID</Label>
+                <Input
+                  id="representativeId"
+                  type="text"
+                  placeholder="Enter your ID"
+                  value={representativeId}
+                  onChange={(e) => setRepresentativeId(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12"
+                />
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                Continue with Replit Auth
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </motion.div>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90 text-white shadow-lg shadow-primary/20 h-12 text-lg font-semibold"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      Sign In
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </form>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -100,14 +179,6 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 text-center text-sm text-slate-500"
-        >
-          <p>Secure authentication powered by Replit Auth</p>
-        </motion.div>
       </motion.div>
     </div>
   );

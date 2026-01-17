@@ -47,12 +47,22 @@ export const timetables = pgTable("timetables", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const representatives = pgTable("representatives", {
+  id: serial("id").primaryKey(),
+  representativeId: text("representative_id").notNull().unique(), // Login ID
+  password: text("password").notNull(), // Hashed password
+  name: text("name").notNull(),
+  email: text("email"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // === SCHEMAS ===
 
 export const insertStudentSchema = createInsertSchema(students).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
 export const insertRegistrationSchema = createInsertSchema(registrations).omit({ id: true, createdAt: true });
 export const insertTimetableSchema = createInsertSchema(timetables).omit({ id: true, createdAt: true });
+export const insertRepresentativeSchema = createInsertSchema(representatives).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 
@@ -67,6 +77,9 @@ export type InsertRegistration = z.infer<typeof insertRegistrationSchema>;
 
 export type Timetable = typeof timetables.$inferSelect;
 export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
+
+export type Representative = typeof representatives.$inferSelect;
+export type InsertRepresentative = z.infer<typeof insertRepresentativeSchema>;
 
 // Request Types
 export type CreateStudentRequest = InsertStudent;

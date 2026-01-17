@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { UserPlus, LogIn, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { RozaryoPayModal } from "@/components/RozaryoPayModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -16,12 +18,20 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const REGISTRATION_FEE = 99; // Registration fee in rupees
 
   // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation]);
+
   if (user) {
-    setLocation("/dashboard");
     return null;
   }
 
@@ -32,6 +42,11 @@ export default function RegisterPage() {
       return;
     }
 
+    // Show payment modal first
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/auth/register", {
@@ -47,12 +62,19 @@ export default function RegisterPage() {
         throw new Error(data.message || "Registration failed");
       }
 
+      // Invalidate and refetch user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       toast({ title: "Success", description: "Account created successfully!" });
-      setLocation("/dashboard");
+      
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 100);
     } catch (error: any) {
       toast({ title: "Registration Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setShowPayment(false);
     }
   };
 
@@ -205,6 +227,14 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
+        {/* Payment Modal */}
+        <RozaryoPayModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          amount={REGISTRATION_FEE}
+          eventName="Representative Registration"
+          onSuccess={handlePaymentSuccess}
+        />
       </motion.div>
     </div>
   );

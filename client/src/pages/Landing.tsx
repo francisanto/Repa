@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Calendar, Search, ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { LiveTimetable } from "@/components/LiveTimetable";
 
 export default function Landing() {
   const { data: events } = useEvents();
@@ -136,6 +137,9 @@ export default function Landing() {
           )}
         </div>
       </section>
+
+      {/* Live Timetable Section */}
+      <LiveTimetable />
 
       {/* Featured Events */}
       <section className="py-20 bg-white">

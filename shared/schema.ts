@@ -28,6 +28,7 @@ export const events = pgTable("events", {
   isPaymentRequired: boolean("is_payment_required").default(false),
   organizerId: text("organizer_id").notNull(), // Links to auth user
   posterUrl: text("poster_url"), // Event poster/image URL
+  reminderDate: timestamp("reminder_date"), // When to send reminder notification
   reminderSent: boolean("reminder_sent").default(false), // Whether reminder was sent
   createdAt: timestamp("created_at").defaultNow(),
 });

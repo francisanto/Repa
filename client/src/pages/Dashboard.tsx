@@ -6,6 +6,10 @@ import { Users, Calendar, TrendingUp, DollarSign, ArrowRight, Sparkles } from "l
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { ChatbotTraining } from "@/components/ChatbotTraining";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { PDFExport } from "@/components/PDFExport";
+import { AttendanceAnalysis, StudentClassification } from "@/components/AIAnalysis";
 
 export default function Dashboard() {
   const { data: students } = useStudents();
@@ -52,11 +56,17 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="flex items-center justify-between"
       >
         <PageHeader 
           title="Dashboard" 
           description="Welcome back, Representative. Here's what's happening with your class."
         />
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <PDFExport data={students || []} filename="students.pdf" title="Students List" />
+          <ChatbotTraining />
+        </div>
       </motion.div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -270,6 +280,24 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* AI Analysis Section */}
+      <div className="grid lg:grid-cols-2 gap-8">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <AttendanceAnalysis />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          <StudentClassification />
+        </motion.div>
+      </div>
     </div>
   );
 }

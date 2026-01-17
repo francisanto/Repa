@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
+import { AIChatbot } from "@/components/AIChatbot";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -201,6 +202,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
+        <AIChatbot />
       </motion.div>
     </div>
   );

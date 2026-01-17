@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Calendar, Clock, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Clock, LogOut, Menu, X, Home } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -71,18 +71,31 @@ export function Navigation() {
         })}
       </div>
 
-      <div className="p-4 mt-auto border-t border-slate-100">
+      <div className="p-4 mt-auto border-t border-slate-100 space-y-2">
         {isAdmin ? (
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start text-slate-600 hover:text-destructive hover:bg-destructive/10 transition-all"
-              onClick={() => logout()}
-            >
-              <LogOut className="w-5 h-5 mr-2" />
-              Logout
-            </Button>
-          </motion.div>
+          <>
+            <Link href="/" className="w-full">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-slate-600 hover:text-primary hover:bg-primary/5 transition-all"
+                >
+                  <Home className="w-5 h-5 mr-2" />
+                  Back to Home
+                </Button>
+              </motion.div>
+            </Link>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-slate-600 hover:text-destructive hover:bg-destructive/10 transition-all"
+                onClick={() => logout()}
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Logout
+              </Button>
+            </motion.div>
+          </>
         ) : (
           <Link href="/login" className="w-full">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

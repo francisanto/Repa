@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
@@ -28,6 +29,7 @@ export default function EventsPage() {
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [reminderDate, setReminderDate] = useState<string>("");
+  const { requestPermission, scheduleNotification } = useNotifications();
 
   const form = useForm({
     resolver: zodResolver(insertEventSchema),
@@ -58,9 +60,36 @@ export default function EventsPage() {
 
   const onSubmit = async (data: any) => {
     try {
-      await createEvent({ ...data, organizerId: user?.id || "temp-id" });
+      const eventData = {
+        ...data,
+        organizerId: user?.id || "temp-id",
+        reminderDate: reminderDate ? new Date(reminderDate) : undefined,
+      };
+      
+      await createEvent(eventData);
+      
+      // Schedule push notification if reminder is set
+      if (reminderDate) {
+        const hasPermission = await requestPermission();
+        if (hasPermission) {
+          const reminderDateTime = new Date(reminderDate);
+          scheduleNotification(
+            `Reminder: ${data.title}`,
+            reminderDateTime,
+            {
+              body: `Don't forget: ${data.description || data.title} on ${new Date(data.date).toLocaleDateString()}`,
+              tag: `event-reminder-${Date.now()}`,
+            }
+          );
+          toast({ title: "Reminder Set", description: "You'll receive a notification before the event" });
+        }
+      }
+      
       setIsAddOpen(false);
       form.reset();
+      setReminderDate("");
+      setPosterFile(null);
+      setPosterPreview(null);
       toast({ title: "Success", description: "Event created successfully" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });

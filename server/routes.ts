@@ -7,7 +7,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { registerAudioRoutes } from "./replit_integrations/audio";
 import { registerImageRoutes } from "./replit_integrations/image";
-import { openai } from "./replit_integrations/image"; // Re-using openai client from image integration (it has the same config)
+import { getOpenAI } from "./replit_integrations/image"; // Re-using getOpenAI from image integration
 import { students, events, registrations, timetables } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -392,7 +392,7 @@ export async function registerRoutes(
           const { batch, image } = api.timetables.upload.input.parse(req.body);
 
           // AI Parsing using GPT-4o
-          const response = await openai.chat.completions.create({
+          const response = await getOpenAI().chat.completions.create({
               model: "gpt-4o",
               messages: [
                   {

@@ -148,65 +148,66 @@ export default function StudentsPage() {
                   <Plus className="w-5 h-5 mr-2" /> Add Student
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Student</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Student</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField
                       control={form.control}
-                      name="rollNo"
+                      name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Roll No</FormLabel>
+                          <FormLabel>Full Name</FormLabel>
                           <FormControl><Input {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="rollNo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Roll No</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="batch"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Batch</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <FormField
                       control={form.control}
-                      name="batch"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Batch</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl><Input type="email" {...field} value={field.value || ""} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl><Input type="email" {...field} value={field.value || ""} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isCreating}>
-                    {isCreating ? <Loader2 className="animate-spin" /> : "Save Student"}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+                    <Button type="submit" className="w-full" disabled={isCreating}>
+                      {isCreating ? <Loader2 className="animate-spin" /> : "Save Student"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 

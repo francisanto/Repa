@@ -176,8 +176,7 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Use database if DATABASE_URL is set (Replit provides this automatically)
-// Otherwise use memory storage for local development
-const databaseUrl = process.env.DATABASE_URL || process.env.REPLIT_DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 let storageInstance: IStorage;
 

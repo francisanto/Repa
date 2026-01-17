@@ -90,6 +90,21 @@ export const api = {
             }),
             400: errorSchemas.validation,
         }
+    },
+    importFromImage: {
+        method: 'POST' as const,
+        path: '/api/students/import-image',
+        input: z.object({
+            image: z.string(), // Base64 image
+            batch: z.string().optional(),
+        }),
+        responses: {
+            201: z.object({
+                imported: z.number(),
+                students: z.array(z.custom<typeof students.$inferSelect>()),
+            }),
+            400: errorSchemas.validation,
+        }
     }
   },
   events: {

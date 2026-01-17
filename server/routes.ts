@@ -151,10 +151,11 @@ export async function registerRoutes(
     cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
   }));
 
-  // Initialize Razorpay
-  const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+  // Initialize Razorpay (default MID: S4yrsJtpeiuw2a)
+  const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "S4yrsJtpeiuw2a";
+  const razorpay = razorpayKeyId && process.env.RAZORPAY_KEY_SECRET
     ? new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
+        key_id: razorpayKeyId,
         key_secret: process.env.RAZORPAY_KEY_SECRET,
       })
     : null;
@@ -170,31 +171,58 @@ export async function registerRoutes(
       // Get events and timetables for context
       const allEvents = await storage.getEvents();
       const allTimetables = await storage.getTimetables();
+      const allStudents = await storage.getStudents();
 
-      // Use OpenAI to answer queries
+      // Use OpenAI to answer queries with better context
       const openai = getOpenAI();
+      const eventsContext = allEvents.slice(0, 10).map(e => ({
+        title: e.title,
+        date: new Date(e.date).toLocaleDateString(),
+        description: e.description?.substring(0, 100) || "",
+        location: e.location || "TBD"
+      }));
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: `You are a helpful AI assistant for a class management system called Repa. 
-            You help students with queries about classes, events, timetables, holidays, and general class information.
-            Current events: ${JSON.stringify(allEvents.slice(0, 5).map(e => ({ title: e.title, date: e.date })))}
-            Be accurate and helpful. If asked about holidays or specific dates, check the events. If unsure, suggest checking the events page or contacting the class representative.`
+            content: `You are a helpful AI assistant for a college class management system called Repa. 
+            You help students with queries about:
+            - Class schedules and timetables
+            - Upcoming events and activities
+            - Exam dates and holidays
+            - General college and academic questions
+            - Assignment deadlines
+            - Class locations and room numbers
+            - Any college-related information
+
+            Context Information:
+            - Upcoming Events: ${JSON.stringify(eventsContext)}
+            - Total Students: ${allStudents.length}
+            - Active Timetables: ${allTimetables.length}
+
+            Guidelines:
+            1. For questions about tomorrow/holidays, check if any events are scheduled. If an event is on that date, it might be a holiday or special day.
+            2. For timetable queries, mention that timetables can be viewed on the website.
+            3. For general college questions (courses, exams, academic policies), provide helpful answers based on typical college practices.
+            4. Always be friendly, accurate, and helpful.
+            5. If you don't have specific information, suggest checking the events page or contacting the class representative.
+            6. For questions like "is tomorrow holiday" - check the events for tomorrow's date and respond accordingly.`
           },
           {
             role: "user",
             content: message
           }
         ],
-        max_tokens: 200,
+        max_tokens: 300,
+        temperature: 0.7,
       });
 
-      res.json({ response: response.choices[0]?.message?.content || "I'm here to help with class-related queries." });
+      res.json({ response: response.choices[0]?.message?.content || "I'm here to help with college-related queries. How can I assist you today?" });
     } catch (error: any) {
       console.error("AI chat error:", error);
-      res.status(500).json({ response: "I'm having trouble right now. Please try again or contact your class representative." });
+      res.status(500).json({ response: "I'm having trouble right now. Please try again or contact your class representative for assistance." });
     }
   });
 
@@ -468,6 +496,116 @@ export async function registerRoutes(
     }
   });
 
+  // === STUDENT IMPORT FROM IMAGE/FILE ===
+  app.post("/api/students/import-image", async (req, res) => {
+    try {
+      const { image, batch } = req.body;
+      
+      if (!image) {
+        return res.status(400).json({ message: "Image data is required" });
+      }
+
+      // Use OpenAI Vision to extract student data from image
+      const openai = getOpenAI();
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert data extraction assistant. Your task is to analyze images containing student lists, rosters, or class information and extract student data accurately.
+
+            IMPORTANT INSTRUCTIONS:
+            1. Identify the type of image: student list, roster, class roll call, attendance sheet, etc.
+            2. Extract ALL visible student information: names, roll numbers, IDs, emails, phone numbers, batches, etc.
+            3. Parse table structures, lists, or any format accurately
+            4. Handle various formats: tables, numbered lists, cards, etc.
+            5. Extract roll numbers/IDs even if labeled differently (Roll No, ID, Student ID, Reg No, etc.)
+            6. Extract names carefully, preserving spelling
+            7. Extract batch/class/section if available
+            8. Extract email and phone if visible
+            9. Output ONLY valid JSON array in this exact format:
+            [
+              {"name": "John Doe", "rollNo": "CS2023001", "batch": "CS-A", "email": "john@example.com", "phone": "1234567890"},
+              {"name": "Jane Smith", "rollNo": "CS2023002", "batch": "CS-A", "email": "jane@example.com", "phone": "0987654321"},
+              ...
+            ]
+            10. Include all fields that are available, use empty string or null for missing data
+            11. If batch is provided in the request, use that for all students
+            12. Be very careful to read all text accurately from the image`
+          },
+          {
+            role: "user",
+            content: [
+              { 
+                type: "text", 
+                text: `Extract all student information from this image. ${batch ? `Default batch: ${batch}` : ""} Extract names, roll numbers, and any other available information accurately.` 
+              },
+              { 
+                type: "image_url", 
+                image_url: { 
+                  url: image,
+                  detail: "high" // Use high detail for better accuracy
+                } 
+              }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1, // Lower temperature for accurate extraction
+        max_tokens: 2000
+      });
+
+      let studentsData: any[] = [];
+      try {
+        const content = response.choices[0]?.message?.content || "{}";
+        const parsed = JSON.parse(content);
+        // Handle both array and object with array property
+        studentsData = Array.isArray(parsed) ? parsed : (parsed.students || parsed.data || []);
+        
+        if (!Array.isArray(studentsData)) {
+          throw new Error("Invalid format: expected array of students");
+        }
+      } catch (parseError: any) {
+        return res.status(400).json({ 
+          message: `Failed to parse extracted data: ${parseError.message}. Please ensure the image contains a clear student list.` 
+        });
+      }
+
+      if (studentsData.length === 0) {
+        return res.status(400).json({ message: "No student data found in the image. Please check the image quality and ensure it contains a student list." });
+      }
+
+      // Normalize and validate student data
+      const normalizedStudents = studentsData.map((s: any) => ({
+        name: s.name?.toString().trim() || "",
+        rollNo: s.rollNo?.toString().trim() || s.roll_number?.toString().trim() || s.id?.toString().trim() || "",
+        batch: batch || s.batch?.toString().trim() || s.class?.toString().trim() || "Default",
+        email: s.email?.toString().trim() || null,
+        phone: s.phone?.toString().trim() || s.mobile?.toString().trim() || null,
+      })).filter(s => s.name && s.rollNo); // Filter out invalid entries
+
+      if (normalizedStudents.length === 0) {
+        return res.status(400).json({ message: "No valid student records found. Ensure the image contains names and roll numbers." });
+      }
+
+      // Bulk create students
+      const created = await storage.bulkCreateStudents(normalizedStudents);
+
+      res.status(201).json({
+        imported: created.length,
+        students: created,
+      });
+    } catch (err: any) {
+      console.error("Student image import error:", err);
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ 
+        message: err.message || "Failed to process student list image. Please ensure the image is clear and contains a readable student list." 
+      });
+    }
+  });
+
   // === RAZORPAY PAYMENT API ===
   app.post("/api/payments/create-order", async (req, res) => {
     try {
@@ -501,7 +639,7 @@ export async function registerRoutes(
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        keyId: process.env.RAZORPAY_KEY_ID,
+        keyId: razorpayKeyId,
       });
     } catch (error: any) {
       console.error("Razorpay order creation error:", error);
@@ -623,23 +761,52 @@ export async function registerRoutes(
       try {
           const { batch, image } = api.timetables.upload.input.parse(req.body);
 
-          // AI Parsing using GPT-4o
-          const response = await getOpenAI().chat.completions.create({
+          // AI Parsing using GPT-4o with improved prompts
+          const openai = getOpenAI();
+          const response = await openai.chat.completions.create({
               model: "gpt-4o",
               messages: [
                   {
                       role: "system",
-                      content: "You are an assistant that extracts timetable data from images. Output ONLY valid JSON in the format: { [day]: [ { time: 'HH:MM', subject: 'Subject', room: 'Room' } ] }. Days should be Monday, Tuesday, etc."
+                      content: `You are an expert timetable extraction assistant. Your task is to analyze timetable images and extract all class schedule information accurately.
+
+                      IMPORTANT INSTRUCTIONS:
+                      1. Identify the type of image: Is it a weekly timetable, daily schedule, or class schedule?
+                      2. Extract ALL visible information: days, times, subjects, room numbers, teacher names (if available)
+                      3. Parse time formats correctly: Handle formats like "9:00-10:00", "9 AM", "09:00", etc.
+                      4. Identify days accurately: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+                      5. Extract subject names as written
+                      6. Extract room numbers/locations (e.g., "Room 101", "Lab 3", "A-201")
+                      7. Output ONLY valid JSON in this exact format:
+                      {
+                        "Monday": [{"time": "09:00-10:00", "subject": "Mathematics", "room": "Room 101"}],
+                        "Tuesday": [{"time": "10:00-11:00", "subject": "Physics", "room": "Lab 1"}],
+                        ...
+                      }
+                      8. If a day has multiple periods, include all of them as an array
+                      9. If time is in a range format, use the start time in the "time" field (e.g., "09:00" from "9:00-10:00")
+                      10. Be very careful to read all text accurately from the image`
                   },
                   {
                       role: "user",
                       content: [
-                          { type: "text", text: "Extract the timetable from this image." },
-                          { type: "image_url", image_url: { url: image } } // image is expected to be data:image/png;base64,...
+                          { 
+                              type: "text", 
+                              text: "Carefully analyze this timetable image. Identify all days, times, subjects, and room numbers. Extract the complete schedule information accurately." 
+                          },
+                          { 
+                              type: "image_url", 
+                              image_url: { 
+                                  url: image,
+                                  detail: "high" // Use high detail for better accuracy
+                              } 
+                          }
                       ]
                   }
               ],
-              response_format: { type: "json_object" }
+              response_format: { type: "json_object" },
+              temperature: 0.1, // Lower temperature for more accurate extraction
+              max_tokens: 2000
           });
 
           const content = JSON.parse(response.choices[0].message.content || "{}");

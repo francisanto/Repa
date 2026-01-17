@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertStudentSchema } from "@shared/schema";
 import { useState } from "react";
-import { Loader2, Trash2, Plus, Search, Upload, FileSpreadsheet, Filter } from "lucide-react";
+import { Loader2, Trash2, Plus, Search, Upload, FileSpreadsheet, Filter, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,9 @@ export default function StudentsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
   const [sheetName, setSheetName] = useState("");
+  const [importImage, setImportImage] = useState<string | null>(null);
+  const [importBatch, setImportBatch] = useState("");
+  const [isImportingImage, setIsImportingImage] = useState(false);
 
   // Get unique batches for filter
   const allStudents = useStudents();
@@ -82,6 +85,51 @@ export default function StudentsPage() {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImportImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImportImage = async () => {
+    if (!importImage) {
+      toast({ title: "Error", description: "Please upload an image", variant: "destructive" });
+      return;
+    }
+    setIsImportingImage(true);
+    try {
+      const response = await fetch("/api/students/import-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ image: importImage, batch: importBatch || undefined }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Import failed");
+      }
+
+      setIsImportOpen(false);
+      setImportImage(null);
+      setImportBatch("");
+      toast({ 
+        title: "Success!", 
+        description: `Imported ${data.imported} students from image` 
+      });
+    } catch (error: any) {
+      toast({ title: "Import Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsImportingImage(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -97,49 +145,107 @@ export default function StudentsPage() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Import from Google Sheets</DialogTitle>
+                  <DialogTitle>Import Students</DialogTitle>
                   <DialogDescription>
-                    Import students from a Google Sheet. Make sure the sheet is publicly accessible (File → Share → Anyone with the link can view).
+                    Import students from Google Sheets or upload an image/file containing student list
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Google Sheets URL</label>
-                    <Input 
-                      placeholder="https://docs.google.com/spreadsheets/d/..."
-                      value={sheetUrl}
-                      onChange={(e) => setSheetUrl(e.target.value)}
-                    />
-                    <p className="text-xs text-slate-500">
-                      Expected columns: Name, Roll No, Batch (Email, Phone optional)
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Sheet Name (optional)</label>
-                    <Input 
-                      placeholder="Sheet1 (leave empty for default)"
-                      value={sheetName}
-                      onChange={(e) => setSheetName(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleImportSheets} 
-                    disabled={!sheetUrl || isImporting}
-                  >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Importing...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Import Students
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Tabs defaultValue="sheets" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="sheets">Google Sheets</TabsTrigger>
+                    <TabsTrigger value="image">Image/File</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="sheets" className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Google Sheets URL</label>
+                      <Input 
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        value={sheetUrl}
+                        onChange={(e) => setSheetUrl(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500">
+                        Expected columns: Name, Roll No, Batch (Email, Phone optional)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sheet Name (optional)</label>
+                      <Input 
+                        placeholder="Sheet1 (leave empty for default)"
+                        value={sheetName}
+                        onChange={(e) => setSheetName(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleImportSheets} 
+                      disabled={!sheetUrl || isImporting}
+                    >
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Import from Sheets
+                        </>
+                      )}
+                    </Button>
+                  </TabsContent>
+
+                  <TabsContent value="image" className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Upload Image/File</label>
+                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center">
+                        <input
+                          type="file"
+                          accept="image/*,.pdf,.doc,.docx"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label htmlFor="image-upload" className="cursor-pointer">
+                          {importImage ? (
+                            <img src={importImage} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                          ) : (
+                            <div className="space-y-2">
+                              <ImageIcon className="w-8 h-8 mx-auto text-slate-400" />
+                              <p className="text-sm text-slate-600">Click to upload image or file</p>
+                              <p className="text-xs text-slate-500">Supports: Images, PDF, Word documents</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Batch (optional)</label>
+                      <Input 
+                        placeholder="e.g., CS-A (leave empty to extract from image)"
+                        value={importBatch}
+                        onChange={(e) => setImportBatch(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleImportImage} 
+                      disabled={!importImage || isImportingImage}
+                    >
+                      {isImportingImage ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Import from Image
+                        </>
+                      )}
+                    </Button>
+                  </TabsContent>
+                </Tabs>
               </DialogContent>
             </Dialog>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

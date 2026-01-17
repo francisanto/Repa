@@ -257,6 +257,7 @@ export default function EventsPage() {
           </Dialog>
         }
       />
+      </motion.div>
 
       {isLoading ? (
         <div className="flex justify-center p-12">

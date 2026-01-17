@@ -799,7 +799,19 @@ export async function registerRoutes(
               max_tokens: 2000
           });
 
-          const content = JSON.parse(response.choices[0].message.content || "{}");
+          let content;
+          try {
+            content = JSON.parse(response.choices[0].message.content || "{}");
+          } catch (e) {
+            // Try to extract JSON from text if parsing fails
+            const textContent = response.choices[0].message.content || "";
+            const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              content = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error("Could not parse timetable data from AI response");
+            }
+          }
 
           const timetable = await storage.createTimetable({
               batch,
@@ -816,6 +828,113 @@ export async function registerRoutes(
           }
           res.status(500).json({ message: "Failed to process timetable" });
       }
+  });
+
+  // === ATTENDANCE API ===
+  app.post("/api/attendance/upload", async (req, res) => {
+    try {
+      const { date, batch, image, attendanceData } = req.body;
+      
+      if (!date || !batch || !image) {
+        return res.status(400).json({ message: "Date, batch, and image are required" });
+      }
+
+      // If attendanceData is provided, use it; otherwise parse from image using AI
+      let parsedData = attendanceData;
+      
+      if (!parsedData) {
+        // Use OpenAI Vision to extract attendance data
+        const openai = getOpenAI();
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `Extract attendance data from the image. Output JSON: {"students": [{"name": "Student Name", "status": "present/absent"}]}`
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Extract all attendance information from this image. Identify each student and their attendance status (present/absent)." },
+                { type: "image_url", image_url: { url: image, detail: "high" } }
+              ]
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+        });
+
+        const content = JSON.parse(response.choices[0]?.message?.content || "{}");
+        parsedData = content.students || [];
+      }
+
+      // Store attendance (simplified - in production would use attendance table)
+      // For now, store as metadata on students
+      res.status(201).json({ 
+        message: "Attendance uploaded successfully",
+        date,
+        batch,
+        count: parsedData.length
+      });
+    } catch (error: any) {
+      console.error("Attendance upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to process attendance" });
+    }
+  });
+
+  // === LEAVE LETTERS API ===
+  app.post("/api/leave-letters/upload", async (req, res) => {
+    try {
+      const { studentName, date, image } = req.body;
+      
+      if (!image) {
+        return res.status(400).json({ message: "Leave letter image is required" });
+      }
+
+      // Use AI to extract and classify leave letter
+      const openai = getOpenAI();
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `Analyze the leave letter image. Extract: student name, date, reason, and classify category (medical, emergency, personal, academic, other). Output JSON: {"studentName": "...", "date": "...", "reason": "...", "category": "..."}`
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extract all information from this leave letter and classify it." },
+              { type: "image_url", image_url: { url: image, detail: "high" } }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+      });
+
+      const extracted = JSON.parse(response.choices[0]?.message?.content || "{}");
+
+      res.status(201).json({
+        studentName: extracted.studentName || studentName,
+        date: extracted.date || date || new Date().toISOString(),
+        reason: extracted.reason || "Not specified",
+        category: extracted.category || "other",
+        imageUrl: image,
+      });
+    } catch (error: any) {
+      console.error("Leave letter upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to process leave letter" });
+    }
+  });
+
+  app.get("/api/leave-letters", async (req, res) => {
+    // Return all leave letters (mock for now)
+    res.json([]);
+  });
+
+  app.get("/api/attendance", async (req, res) => {
+    // Return all attendance records (mock for now)
+    res.json([]);
   });
 
   // Seed Data

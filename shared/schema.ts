@@ -5,6 +5,7 @@ import { z } from "zod";
 // Export everything from auth and chat models
 export * from "./models/auth";
 export * from "./models/chat";
+export * from "./schema-attendance";
 
 // === TABLE DEFINITIONS ===
 

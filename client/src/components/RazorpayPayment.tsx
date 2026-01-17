@@ -32,18 +32,14 @@ export function RazorpayPayment({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen && amount > 0) {
-      // Load Razorpay script
+    // Load Razorpay script once on mount
+    if (!window.Razorpay && !document.querySelector('script[src*="razorpay"]')) {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.async = true;
       document.body.appendChild(script);
-
-      return () => {
-        document.body.removeChild(script);
-      };
     }
-  }, [isOpen, amount]);
+  }, []);
 
   const handlePayment = async () => {
     try {
@@ -104,15 +100,36 @@ export function RazorpayPayment({
         },
       };
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.on("payment.failed", function (response: any) {
-        toast({
-          title: "Payment Failed",
-          description: response.error.description || "Payment could not be processed.",
-          variant: "destructive",
+      if (!window.Razorpay) {
+        // Wait for script to load
+        const checkInterval = setInterval(() => {
+          if (window.Razorpay) {
+            clearInterval(checkInterval);
+            const razorpay = new window.Razorpay(options);
+            razorpay.on("payment.failed", function (response: any) {
+              toast({
+                title: "Payment Failed",
+                description: response.error.description || "Payment could not be processed.",
+                variant: "destructive",
+              });
+            });
+            razorpay.open();
+          }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => clearInterval(checkInterval), 5000);
+      } else {
+        const razorpay = new window.Razorpay(options);
+        razorpay.on("payment.failed", function (response: any) {
+          toast({
+            title: "Payment Failed",
+            description: response.error.description || "Payment could not be processed.",
+            variant: "destructive",
+          });
         });
-      });
-      razorpay.open();
+        razorpay.open();
+      }
     } catch (error: any) {
       toast({
         title: "Error",

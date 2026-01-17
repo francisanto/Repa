@@ -115,12 +115,13 @@ export default function EventsPage() {
                 </Button>
               </motion.div>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="flex-1 overflow-y-auto px-1">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -251,8 +252,9 @@ export default function EventsPage() {
                       "Create Event"
                     )}
                   </Button>
-                </form>
-              </Form>
+                  </form>
+                </Form>
+              </div>
             </DialogContent>
           </Dialog>
         }

@@ -136,6 +136,15 @@ export default function PublicEvents() {
       {/* Registration Dialog */}
       <Dialog open={!!selectedEvent && !showPayment} onOpenChange={(open) => !open && setSelectedEvent(null)}>
         <DialogContent className="sm:max-w-md">
+          {selectedEvent?.posterUrl && (
+            <div className="w-full h-48 overflow-hidden rounded-t-lg -mt-6 -mx-6 mb-4">
+              <img 
+                src={selectedEvent.posterUrl} 
+                alt={selectedEvent.title} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           <DialogHeader>
             <DialogTitle className="text-2xl">Register for {selectedEvent?.title}</DialogTitle>
             <DialogDescription>

@@ -14,6 +14,7 @@ import Dashboard from "@/pages/Dashboard";
 import StudentsPage from "@/pages/StudentsPage";
 import EventsPage from "@/pages/EventsPage";
 import TimetablePage from "@/pages/TimetablePage";
+import AttendancePage from "@/pages/AttendancePage";
 import PublicEvents from "@/pages/PublicEvents";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -69,6 +70,9 @@ function Router() {
       </Route>
       <Route path="/dashboard/timetable">
         {() => <PrivateRoute component={TimetablePage} />}
+      </Route>
+      <Route path="/dashboard/attendance">
+        {() => <PrivateRoute component={AttendancePage} />}
       </Route>
 
       <Route component={NotFound} />

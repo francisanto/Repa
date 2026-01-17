@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Calendar, Clock, LogOut, Menu, X, Home } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Clock, LogOut, Menu, X, Home, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,6 +17,7 @@ export function Navigation() {
     { href: "/dashboard/students", label: "Students", icon: Users },
     { href: "/dashboard/events", label: "Events", icon: Calendar },
     { href: "/dashboard/timetable", label: "Timetable", icon: Clock },
+    { href: "/dashboard/attendance", label: "Attendance", icon: ClipboardList },
   ] : [
     { href: "/", label: "Home", icon: LayoutDashboard },
     { href: "/events", label: "Events", icon: Calendar },

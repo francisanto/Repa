@@ -57,27 +57,60 @@ export default function TimetablePage() {
   }, [selectedTimetable, showReminders, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFile(e.target.files[0]);
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!validTypes.includes(selectedFile.type)) {
+        toast({ 
+          title: "Invalid File", 
+          description: "Please upload an image (JPG, PNG, WebP) or PDF file",
+          variant: "destructive" 
+        });
+        return;
+      }
+      setFile(selectedFile);
     }
   };
 
   const handleUpload = async () => {
-    if (!file || !batch) return;
+    if (!file || !batch) {
+      toast({ 
+        title: "Missing Information", 
+        description: "Please select a file and enter batch name",
+        variant: "destructive" 
+      });
+      return;
+    }
 
-    // Convert file to base64 mock
+    // Convert file to base64
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
       try {
-        await upload({ batch, image: reader.result as string });
+        const base64Image = reader.result as string;
+        await upload({ batch, image: base64Image });
         setIsUploadOpen(false);
         setBatch("");
         setFile(null);
+        // Reset file input
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
         toast({ title: "Success", description: "Timetable processed by AI and uploaded!" });
-      } catch (error) {
-        toast({ title: "Error", description: "Upload failed", variant: "destructive" });
+      } catch (error: any) {
+        toast({ 
+          title: "Error", 
+          description: error.message || "Upload failed. Please ensure the image is clear and readable.",
+          variant: "destructive" 
+        });
       }
+    };
+    reader.onerror = () => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to read file. Please try again.",
+        variant: "destructive" 
+      });
     };
   };
 

@@ -10,6 +10,7 @@ import { ChatbotTraining } from "@/components/ChatbotTraining";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { PDFExport } from "@/components/PDFExport";
 import { AttendanceAnalysis, StudentClassification } from "@/components/AIAnalysis";
+import { ReminderManager } from "@/components/ReminderManager";
 
 export default function Dashboard() {
   const { data: students } = useStudents();
@@ -66,6 +67,7 @@ export default function Dashboard() {
           <DarkModeToggle />
           <PDFExport data={students || []} filename="students.pdf" title="Students List" />
           <ChatbotTraining />
+          <ReminderManager />
         </div>
       </motion.div>
 

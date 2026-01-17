@@ -11,6 +11,8 @@ import { getOpenAI } from "./replit_integrations/image"; // Re-using getOpenAI f
 import { students, events, registrations, timetables } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import session from "express-session";
+import Razorpay from "razorpay";
+import * as crypto from "crypto";
 
 // Enhanced fuzzy matching with multiple algorithms
 function levenshtein(a: string, b: string): number {
@@ -148,6 +150,53 @@ export async function registerRoutes(
     saveUninitialized: false,
     cookie: { secure: false, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
   }));
+
+  // Initialize Razorpay
+  const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      })
+    : null;
+
+  // === AI CHAT API ===
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      // Get events and timetables for context
+      const allEvents = await storage.getEvents();
+      const allTimetables = await storage.getTimetables();
+
+      // Use OpenAI to answer queries
+      const openai = getOpenAI();
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful AI assistant for a class management system called Repa. 
+            You help students with queries about classes, events, timetables, holidays, and general class information.
+            Current events: ${JSON.stringify(allEvents.slice(0, 5).map(e => ({ title: e.title, date: e.date })))}
+            Be accurate and helpful. If asked about holidays or specific dates, check the events. If unsure, suggest checking the events page or contacting the class representative.`
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ],
+        max_tokens: 200,
+      });
+
+      res.json({ response: response.choices[0]?.message?.content || "I'm here to help with class-related queries." });
+    } catch (error: any) {
+      console.error("AI chat error:", error);
+      res.status(500).json({ response: "I'm having trouble right now. Please try again or contact your class representative." });
+    }
+  });
 
   // === AUTH API (Simple ID/Password) ===
   app.post("/api/auth/register", async (req, res) => {
@@ -419,10 +468,87 @@ export async function registerRoutes(
     }
   });
 
-  // === REGISTRATIONS API (With Enhanced Fuzzy Match) ===
+  // === RAZORPAY PAYMENT API ===
+  app.post("/api/payments/create-order", async (req, res) => {
+    try {
+      if (!razorpay) {
+        return res.status(500).json({ message: "Payment gateway not configured" });
+      }
+
+      const { eventId, amount, studentName } = req.body;
+      
+      if (!eventId || !amount || amount <= 0) {
+        return res.status(400).json({ message: "Valid event ID and amount required" });
+      }
+
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Create Razorpay order
+      const order = await razorpay.orders.create({
+        amount: amount * 100, // Convert to paise
+        currency: "INR",
+        receipt: `event_${eventId}_${Date.now()}`,
+        notes: {
+          eventId: eventId.toString(),
+          studentName: studentName || "Student",
+        },
+      });
+
+      res.json({
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: process.env.RAZORPAY_KEY_ID,
+      });
+    } catch (error: any) {
+      console.error("Razorpay order creation error:", error);
+      res.status(500).json({ message: error.message || "Failed to create payment order" });
+    }
+  });
+
+  // === RAZORPAY WEBHOOK ===
+  app.post("/api/payments/webhook", async (req, res) => {
+    try {
+      if (!razorpay) {
+        return res.status(500).json({ message: "Payment gateway not configured" });
+      }
+
+      const { event, payload } = req.body;
+
+      if (event === "payment.captured") {
+        const { order_id, payment_id, amount, notes } = payload.payment.entity;
+        const eventId = parseInt(notes?.eventId);
+
+        if (eventId) {
+          // Find registration by order ID and update payment status
+          const registrations = await storage.getRegistrations(eventId);
+          const registration = registrations.find((r: any) => r.razorpayOrderId === order_id);
+
+          if (registration) {
+            await storage.updateRegistration(registration.id, {
+              razorpayPaymentId: payment_id,
+              paymentStatus: "paid",
+              status: "paid",
+              amount: amount / 100, // Convert from paise
+            });
+          }
+        }
+      }
+
+      res.json({ status: "ok" });
+    } catch (error: any) {
+      console.error("Webhook error:", error);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // === REGISTRATIONS API (With Enhanced Fuzzy Match & Payment) ===
   app.post(api.registrations.create.path, async (req, res) => {
     try {
-      const { eventId, studentName } = api.registrations.create.input.parse(req.body);
+      const { eventId, studentName, orderId, paymentId } = api.registrations.create.input.parse(req.body);
       
       // 1. Enhanced Fuzzy Match Logic
       const allStudents = await storage.getStudents();
@@ -441,12 +567,22 @@ export async function registerRoutes(
           return res.status(400).json({ message: `Already registered as ${matchResult.student.name}` });
       }
 
-      // 3. Create Registration
+      // 3. Get event to check if payment is required
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // 4. Create Registration
       const registration = await storage.createRegistration({
         eventId,
         studentId: matchResult.student.id,
-        status: "registered",
-        paymentId: null, // Initial registration
+        status: event.amount > 0 && !paymentId ? "registered" : "paid",
+        paymentId: paymentId || null,
+        razorpayOrderId: orderId || null,
+        razorpayPaymentId: paymentId || null,
+        amount: event.amount || 0,
+        paymentStatus: event.amount > 0 && paymentId ? "paid" : event.amount > 0 ? "pending" : null,
       });
 
       res.status(201).json({ 

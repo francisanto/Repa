@@ -26,6 +26,7 @@ export interface IStorage {
   createRegistration(registration: InsertRegistration): Promise<Registration>;
   getRegistrations(eventId?: number): Promise<Registration[]>;
   getRegistrationByStudentAndEvent(studentId: number, eventId: number): Promise<Registration | undefined>;
+  updateRegistration(id: number, updates: Partial<InsertRegistration>): Promise<Registration>;
 
   // Timetables
   getTimetables(): Promise<Timetable[]>;
@@ -138,6 +139,16 @@ export class DatabaseStorage implements IStorage {
     return reg;
   }
 
+  async updateRegistration(id: number, updates: Partial<InsertRegistration>): Promise<Registration> {
+    const db = this.getDb();
+    const [updated] = await db.update(registrations)
+      .set(updates)
+      .where(eq(registrations.id, id))
+      .returning();
+    if (!updated) throw new Error("Registration not found");
+    return updated;
+  }
+
   // Timetables
   async getTimetables(): Promise<Timetable[]> {
     const db = this.getDb();
@@ -164,7 +175,19 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use memory storage for testing without database
-// Change to DatabaseStorage() when you want to use database
-import { MemoryStorage } from "./memory-storage";
-export const storage = new MemoryStorage();
+// Use database if DATABASE_URL is set (Replit provides this automatically)
+// Otherwise use memory storage for local development
+const databaseUrl = process.env.DATABASE_URL || process.env.REPLIT_DATABASE_URL;
+
+let storageInstance: IStorage;
+
+if (process.env.USE_MEMORY_STORAGE === "true" || !databaseUrl) {
+  const { MemoryStorage } = require("./memory-storage");
+  storageInstance = new MemoryStorage();
+  console.log("📦 Using in-memory storage");
+} else {
+  storageInstance = new DatabaseStorage();
+  console.log("💾 Using PostgreSQL database");
+}
+
+export const storage = storageInstance;

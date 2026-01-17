@@ -8,7 +8,6 @@ import { UserPlus, LogIn, ArrowRight, CheckCircle2, Loader2 } from "lucide-react
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { RozaryoPayModal } from "@/components/RozaryoPayModal";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function RegisterPage() {
@@ -18,11 +17,9 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const REGISTRATION_FEE = 99; // Registration fee in rupees
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,11 +39,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Show payment modal first
-    setShowPayment(true);
-  };
-
-  const handlePaymentSuccess = async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/auth/register", {
@@ -74,7 +66,6 @@ export default function RegisterPage() {
       toast({ title: "Registration Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
-      setShowPayment(false);
     }
   };
 
@@ -226,15 +217,6 @@ export default function RegisterPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Payment Modal */}
-        <RozaryoPayModal
-          isOpen={showPayment}
-          onClose={() => setShowPayment(false)}
-          amount={REGISTRATION_FEE}
-          eventName="Representative Registration"
-          onSuccess={handlePaymentSuccess}
-        />
       </motion.div>
     </div>
   );

@@ -8,6 +8,7 @@ import { Calendar, Search, ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { LiveTimetable } from "@/components/LiveTimetable";
+import { AIChatbot } from "@/components/AIChatbot";
 
 export default function Landing() {
   const { data: events } = useEvents();
@@ -193,6 +194,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* AI Chatbot for Students */}
+      <AIChatbot />
     </div>
   );
 }

@@ -4,12 +4,20 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-// Only create db connection if DATABASE_URL is set (for production/database mode)
-// In memory storage mode, this won't be used
-export const pool = process.env.DATABASE_URL 
-  ? new Pool({ connectionString: process.env.DATABASE_URL })
+// Replit provides DATABASE_URL automatically when database is provisioned
+// For local dev, use memory storage if DATABASE_URL is not set
+const databaseUrl = process.env.DATABASE_URL || process.env.REPLIT_DATABASE_URL;
+
+export const pool = databaseUrl
+  ? new Pool({ connectionString: databaseUrl })
   : null;
 
 export const db = pool 
   ? drizzle(pool, { schema })
   : null as any; // Type assertion for when db is not used (memory storage mode)
+
+if (pool) {
+  console.log("✅ Connected to PostgreSQL database");
+} else {
+  console.log("⚠️  Running in memory storage mode (no DATABASE_URL set)");
+}

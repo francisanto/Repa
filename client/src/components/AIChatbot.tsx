@@ -48,20 +48,40 @@ export function AIChatbot() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response (in production, call actual AI API)
-    setTimeout(() => {
+    try {
+      // Call backend AI API
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message: currentInput }),
+      });
+
+      const data = await response.json();
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `I understand you're asking about "${userMessage.content}". As your AI assistant, I'm here to help with class management, event planning, and student queries. You can train me in the dashboard to provide more specific responses!`,
+        content: data.response || "I'm here to help with class-related queries. Please check the events page or contact your class representative for specific information.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      // Fallback response
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "I'm here to help with class-related queries. Please check the events page or contact your class representative for specific information.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, aiResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   if (!isOpen) {

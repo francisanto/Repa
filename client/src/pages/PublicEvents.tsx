@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RozaryoPayModal } from "@/components/RozaryoPayModal";
+import { RazorpayPayment } from "@/components/RazorpayPayment";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
@@ -60,9 +60,14 @@ export default function PublicEvents() {
     }
   };
 
-  const processRegistration = async () => {
+  const processRegistration = async (paymentId?: string, orderId?: string) => {
     try {
-      await register({ eventId: selectedEvent.id, studentName });
+      await register({ 
+        eventId: selectedEvent.id, 
+        studentName,
+        paymentId,
+        orderId,
+      });
       toast({ title: "Success!", description: "You have been registered for the event." });
       setSelectedEvent(null);
       setStudentName("");
@@ -118,7 +123,7 @@ export default function PublicEvents() {
                       className="w-full bg-slate-900 hover:bg-slate-800"
                       onClick={() => handleRegisterClick(event)}
                     >
-                      Register Now
+                      {event.amount > 0 ? `Register & Pay ₹${event.amount}` : "Register"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -176,14 +181,16 @@ export default function PublicEvents() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment Modal */}
-      {selectedEvent && (
-        <RozaryoPayModal
+      {/* Razorpay Payment Modal */}
+      {selectedEvent && selectedEvent.isPaymentRequired && selectedEvent.amount > 0 && (
+        <RazorpayPayment
           isOpen={showPayment}
           onClose={() => setShowPayment(false)}
-          amount={selectedEvent.amount || 0}
+          amount={selectedEvent.amount}
           eventName={selectedEvent.title}
-          onSuccess={processRegistration}
+          eventId={selectedEvent.id}
+          studentName={studentName}
+          onSuccess={(paymentId, orderId) => processRegistration(paymentId, orderId)}
         />
       )}
     </div>

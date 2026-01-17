@@ -132,6 +132,13 @@ export class MemoryStorage implements IStorage {
     );
   }
 
+  async updateRegistration(id: number, updates: Partial<InsertRegistration>): Promise<Registration> {
+    const index = this.registrations.findIndex(r => r.id === id);
+    if (index === -1) throw new Error("Registration not found");
+    this.registrations[index] = { ...this.registrations[index], ...updates };
+    return this.registrations[index];
+  }
+
   // Timetables
   async getTimetables(): Promise<Timetable[]> {
     return [...this.timetables];

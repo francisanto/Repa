@@ -125,6 +125,8 @@ export const api = {
       input: z.object({
         eventId: z.number(),
         studentName: z.string(), // For fuzzy matching
+        orderId: z.string().optional(),
+        paymentId: z.string().optional(),
       }),
       responses: {
         201: z.custom<typeof registrations.$inferSelect>(),

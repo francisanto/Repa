@@ -48,6 +48,10 @@ export const registrations = pgTable("registrations", {
   studentId: integer("student_id").notNull(),
   status: text("status").default("registered"), // registered, paid, cancelled
   paymentId: text("payment_id"),
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  amount: integer("amount").default(0),
+  paymentStatus: text("payment_status"), // pending, paid, failed
   createdAt: timestamp("created_at").defaultNow(),
 });
 

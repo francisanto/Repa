@@ -48,16 +48,23 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <PageHeader 
-        title="Events" 
-        description="Plan and manage class activities"
-        action={
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-cyan-50/20 -m-8 p-8">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <PageHeader 
+          title="Events" 
+          description="Plan and manage class activities"
+          action={
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="rounded-full shadow-lg shadow-primary/20">
-                <Plus className="w-5 h-5 mr-2" /> Create Event
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className="rounded-full bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90 text-white shadow-lg shadow-primary/20">
+                  <Plus className="w-5 h-5 mr-2" /> Create Event
+                </Button>
+              </motion.div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
@@ -174,16 +181,16 @@ export default function EventsPage() {
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
             >
-              <Card className="group hover:shadow-2xl transition-all duration-300 border-none shadow-lg overflow-hidden bg-white/90 backdrop-blur">
-                <div className="h-3 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
+              <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-xl overflow-hidden bg-white/90 backdrop-blur-sm">
+                <div className="h-2 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <motion.div 
-                      className="w-14 h-14 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl flex items-center justify-center text-primary shadow-md group-hover:scale-110 transition-transform"
+                      className="w-14 h-14 bg-gradient-to-br from-primary to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
                       whileHover={{ rotate: 360 }}
                       transition={{ duration: 0.5 }}
                     >
-                      <CalendarIcon className="w-7 h-7" />
+                      <CalendarIcon className="w-7 h-7 text-white" />
                     </motion.div>
                     {event.isPaymentRequired && (
                       <motion.span 
@@ -215,9 +222,28 @@ export default function EventsPage() {
             </motion.div>
           ))}
           {!events?.length && (
-            <div className="col-span-full text-center py-12 text-slate-500 bg-white rounded-xl border border-dashed border-slate-200">
-              No events scheduled yet. Create one to get started!
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="col-span-full text-center py-16 bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-dashed border-slate-300"
+            >
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="w-20 h-20 bg-gradient-to-br from-primary/10 to-cyan-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              >
+                <CalendarIcon className="w-10 h-10 text-primary/50" />
+              </motion.div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No events scheduled yet</h3>
+              <p className="text-slate-500 mb-6">Create your first event to get started!</p>
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-primary to-cyan-500 text-white">
+                    <Plus className="w-4 h-4 mr-2" /> Create Event
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </motion.div>
           )}
         </div>
       )}

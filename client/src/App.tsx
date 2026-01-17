@@ -15,6 +15,8 @@ import StudentsPage from "@/pages/StudentsPage";
 import EventsPage from "@/pages/EventsPage";
 import TimetablePage from "@/pages/TimetablePage";
 import PublicEvents from "@/pages/PublicEvents";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
 import NotFound from "@/pages/not-found";
 
 function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
@@ -52,6 +54,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/events" component={PublicEvents} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
       
       {/* Protected Routes */}
       <Route path="/dashboard">

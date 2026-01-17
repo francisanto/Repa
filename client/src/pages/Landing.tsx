@@ -3,9 +3,9 @@ import { useStudents } from "@/hooks/use-students";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { Calendar, Search, ArrowRight, Bell, Sparkles, BookOpen } from "lucide-react";
-import { useState } from "react";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import { Calendar, Search, ArrowRight, Bell, Sparkles, BookOpen, Users, Clock, TrendingUp, Shield, Zap, BarChart3, CheckCircle2 } from "lucide-react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 
 export default function Landing() {
@@ -14,10 +14,21 @@ export default function Landing() {
   const { data: students } = useStudents(searchTerm ? { search: searchTerm } : undefined);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30">
       {/* Hero Section */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-5" />
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/5"
+          animate={{
+            backgroundPosition: ["0% 0%", "100% 100%"],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        />
         
         <div className="container mx-auto px-4 py-20 relative z-10">
           <nav className="flex justify-between items-center mb-20">
@@ -25,11 +36,18 @@ export default function Landing() {
               <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center text-sm">CR</span>
               ClassRep
             </h1>
-            <Link href="/api/login">
-              <Button variant="outline" className="border-primary/20 hover:bg-primary/5 hover:text-primary">
-                Representative Login
-              </Button>
-            </Link>
+            <div className="flex gap-3">
+              <Link href="/login">
+                <Button variant="outline" className="border-primary/20 hover:bg-primary/5 hover:text-primary">
+                  Representative Login
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+                  Register
+                </Button>
+              </Link>
+            </div>
           </nav>
 
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -38,9 +56,14 @@ export default function Landing() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-6">
-                ✨ The smartest way to manage your class
-              </span>
+              <motion.span 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 text-sm font-medium mb-6 shadow-lg shadow-blue-200/50"
+              >
+                ✨ Streamline Your Class Management
+              </motion.span>
               <h1 className="text-5xl md:text-7xl font-bold text-slate-900 font-display tracking-tight leading-tight">
                 Your Class. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-500">
@@ -48,8 +71,8 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="text-xl text-slate-600 max-w-2xl mx-auto mt-6">
-                Access timetables, register for events, and stay updated with your class activities. 
-                Everything you need in one place.
+                Seamlessly organize events, track attendance, manage timetables, and keep your class connected. 
+                Everything you need in one powerful platform.
               </p>
             </motion.div>
 
@@ -64,9 +87,11 @@ export default function Landing() {
                   View Events <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Button size="lg" variant="secondary" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-slate-50 border border-slate-200">
-                Check Timetable
-              </Button>
+              <Link href="/events">
+                <Button size="lg" variant="secondary" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-slate-50 border border-slate-200">
+                  Check Timetable
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </div>
@@ -121,6 +146,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Features Section with Scroll Animations */}
+      <FeaturesSection />
+
       {/* Featured Events */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
@@ -135,10 +163,14 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {events?.slice(0, 3).map((event) => (
+            {events?.slice(0, 3).map((event, index) => (
               <motion.div 
                 key={event.id}
-                whileHover={{ y: -5 }}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                whileHover={{ y: -5, scale: 1.02 }}
                 className="group cursor-pointer"
               >
                 <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all h-full bg-slate-50">
@@ -166,5 +198,116 @@ export default function Landing() {
         </div>
       </section>
     </div>
+  );
+}
+
+// Features Section Component with Scroll Animations
+function FeaturesSection() {
+  const features = [
+    {
+      icon: Calendar,
+      title: "Event Management",
+      description: "Create, manage, and track class events with ease. Handle registrations and payments seamlessly.",
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-50",
+    },
+    {
+      icon: Users,
+      title: "Student Directory",
+      description: "Quick access to student information, roll numbers, and batch details with smart search.",
+      color: "from-purple-500 to-pink-500",
+      bgColor: "bg-purple-50",
+    },
+    {
+      icon: Clock,
+      title: "Smart Timetables",
+      description: "AI-powered timetable extraction and management. Upload images and get structured schedules.",
+      color: "from-orange-500 to-red-500",
+      bgColor: "bg-orange-50",
+    },
+    {
+      icon: TrendingUp,
+      title: "Analytics & Insights",
+      description: "Track engagement, attendance, and event participation with comprehensive analytics.",
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50",
+    },
+    {
+      icon: Shield,
+      title: "Secure & Reliable",
+      description: "Your data is protected with enterprise-grade security and reliable infrastructure.",
+      color: "from-indigo-500 to-blue-500",
+      bgColor: "bg-indigo-50",
+    },
+    {
+      icon: Zap,
+      title: "Lightning Fast",
+      description: "Experience blazing-fast performance with optimized queries and real-time updates.",
+      color: "from-yellow-500 to-orange-500",
+      bgColor: "bg-yellow-50",
+    },
+  ];
+
+  return (
+    <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/30">
+      <div className="container mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 font-display mb-4">
+            Powerful Features for <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-500">Modern Class Management</span>
+          </h2>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Everything you need to manage your class efficiently and beautifully
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {features.map((feature, index) => (
+            <FeatureCard key={feature.title} feature={feature} index={index} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeatureCard({ feature, index }: { feature: typeof features[0], index: number }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const Icon = feature.icon;
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className="group"
+    >
+      <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white/80 backdrop-blur-sm overflow-hidden">
+        <div className={`h-1 bg-gradient-to-r ${feature.color}`} />
+        <CardContent className="p-8">
+          <motion.div
+            whileHover={{ rotate: 360, scale: 1.1 }}
+            transition={{ duration: 0.5 }}
+            className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:shadow-xl transition-shadow`}
+          >
+            <Icon className="w-8 h-8 text-white" />
+          </motion.div>
+          <h3 className="text-2xl font-bold text-slate-900 mb-3 group-hover:text-primary transition-colors">
+            {feature.title}
+          </h3>
+          <p className="text-slate-600 leading-relaxed">
+            {feature.description}
+          </p>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

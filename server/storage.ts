@@ -37,10 +37,10 @@ export interface IStorage {
   createRepresentative(rep: InsertRepresentative): Promise<Representative>;
 }
 
+import { db } from "./db";
+
 export class DatabaseStorage implements IStorage {
   private getDb() {
-    // Lazy import to avoid error when DATABASE_URL is not set
-    const { db } = require("./db");
     return db;
   }
 

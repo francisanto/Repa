@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { Upload, FileText, Loader2, Sparkles, Clock, MapPin, Bell, Calendar as CalendarIcon } from "lucide-react";
+import { Upload, FileText, Loader2, Sparkles, Clock, MapPin, Bell, Calendar as CalendarIcon, Radio } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -82,10 +82,15 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="space-y-8">
-      <PageHeader 
-        title="Timetables" 
-        description="AI-Powered Timetable Management"
+    <div className="space-y-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-cyan-50/20 -m-8 p-8">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <PageHeader 
+          title="Timetables" 
+          description="AI-Powered Timetable Management"
         action={
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger asChild>
@@ -126,6 +131,7 @@ export default function TimetablePage() {
           </Dialog>
         }
       />
+      </motion.div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
@@ -145,17 +151,23 @@ export default function TimetablePage() {
               <div className="h-2 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
-                    <CalendarIcon className="w-6 h-6 text-primary" />
+                  <div className="bg-gradient-to-br from-primary to-cyan-500 p-3 rounded-xl group-hover:scale-110 transition-transform shadow-lg">
+                    <CalendarIcon className="w-6 h-6 text-white" />
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {new Date(tt.createdAt).toLocaleDateString()}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 flex items-center gap-1">
+                      <Radio className="w-3 h-3 animate-pulse" />
+                      Live
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {new Date(tt.createdAt).toLocaleDateString()}
+                    </Badge>
+                  </div>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary transition-colors">
                   {tt.batch}
                 </h3>
-                <p className="text-sm text-slate-500 mb-4">AI-Parsed Schedule</p>
+                <p className="text-sm text-slate-500 mb-4">AI-Parsed Live Schedule</p>
                 <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-white transition-colors">
                   View Interactive Schedule
                 </Button>

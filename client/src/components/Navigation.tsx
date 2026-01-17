@@ -30,10 +30,10 @@ export function Navigation() {
           className="flex items-center gap-2"
         >
           <div className="w-10 h-10 bg-gradient-to-br from-primary to-cyan-500 text-white rounded-xl flex items-center justify-center text-sm font-bold shadow-lg shadow-primary/30">
-            CR
+            RP
           </div>
           <h1 className="text-2xl font-bold font-display bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
-            ClassRep
+            Repa
           </h1>
         </motion.div>
       </div>

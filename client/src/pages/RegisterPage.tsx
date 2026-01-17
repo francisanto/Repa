@@ -72,50 +72,36 @@ export default function RegisterPage() {
             className="inline-flex items-center gap-2 mb-4"
           >
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-cyan-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-lg shadow-primary/30">
-              CR
+              RP
             </div>
             <h1 className="text-3xl font-bold font-display bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
-              ClassRep
+              Repa
             </h1>
           </motion.div>
           <p className="text-slate-600">Join as a Representative</p>
         </div>
 
-        <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm">
-          <div className="h-1 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
-          <CardHeader className="text-center space-y-2">
+        <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-md overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-primary via-cyan-500 to-blue-500" />
+          <CardHeader className="text-center space-y-3 pb-6">
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring" }}
-              className="w-16 h-16 bg-gradient-to-br from-cyan-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              initial={{ scale: 0, rotate: 180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+              className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-cyan-500/30"
             >
-              <UserPlus className="w-8 h-8 text-primary" />
+              <UserPlus className="w-10 h-10 text-white" />
             </motion.div>
-            <CardTitle className="text-2xl font-display">Create Account</CardTitle>
-            <CardDescription className="text-base">
-              Register as a class representative to get started
+            <CardTitle className="text-3xl font-display bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">Create Account</CardTitle>
+            <CardDescription className="text-base text-slate-600">
+              Join as a class representative
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-3 mb-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-700">Manage class events and registrations</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-700">Track student attendance and activities</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-slate-700">Upload and manage timetables</p>
-                </div>
-              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="name" className="text-sm font-semibold text-slate-700">Full Name *</Label>
                 <Input
                   id="name"
                   type="text"
@@ -123,11 +109,11 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="h-12"
+                  className="h-12 rounded-xl border-2 border-slate-200 focus:border-primary/50 transition-colors"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="representativeId">Representative ID *</Label>
+                <Label htmlFor="representativeId" className="text-sm font-semibold text-slate-700">Representative ID *</Label>
                 <Input
                   id="representativeId"
                   type="text"
@@ -135,22 +121,22 @@ export default function RegisterPage() {
                   value={representativeId}
                   onChange={(e) => setRepresentativeId(e.target.value)}
                   required
-                  className="h-12"
+                  className="h-12 rounded-xl border-2 border-slate-200 focus:border-primary/50 transition-colors"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Email (Optional)</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12"
+                  className="h-12 rounded-xl border-2 border-slate-200 focus:border-primary/50 transition-colors"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password" className="text-sm font-semibold text-slate-700">Password *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -158,7 +144,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12"
+                  className="h-12 rounded-xl border-2 border-slate-200 focus:border-primary/50 transition-colors"
                 />
               </div>
               <motion.div

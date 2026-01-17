@@ -9,12 +9,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema } from "@shared/schema";
 import { useState } from "react";
-import { Loader2, Plus, Calendar as CalendarIcon, MapPin, IndianRupee } from "lucide-react";
+import { Loader2, Plus, Calendar as CalendarIcon, MapPin, IndianRupee, Image, Bell, Share2, Sparkles, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
+import { motion } from "framer-motion";
 
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
@@ -22,6 +24,10 @@ export default function EventsPage() {
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const { user } = useAuth();
+
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [reminderDate, setReminderDate] = useState<string>("");
 
   const form = useForm({
     resolver: zodResolver(insertEventSchema),
@@ -33,8 +39,22 @@ export default function EventsPage() {
       amount: 0,
       isPaymentRequired: false,
       organizerId: user?.id || "temp-id",
+      posterUrl: "",
     },
   });
+
+  const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPosterFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPosterPreview(reader.result as string);
+        form.setValue("posterUrl", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const onSubmit = async (data: any) => {
     try {
@@ -157,8 +177,50 @@ export default function EventsPage() {
                     />
                   )}
 
-                  <Button type="submit" className="w-full" disabled={isCreating}>
-                    {isCreating ? <Loader2 className="animate-spin" /> : "Create Event"}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Event Poster</Label>
+                    <div className="flex items-center gap-4">
+                      <label className="flex-1 cursor-pointer">
+                        <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
+                          {posterPreview ? (
+                            <img src={posterPreview} alt="Poster preview" className="max-h-32 mx-auto rounded-lg" />
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="w-8 h-8 mx-auto text-slate-400" />
+                              <p className="text-sm text-slate-600">Upload poster image</p>
+                            </div>
+                          )}
+                        </div>
+                        <input type="file" accept="image/*" onChange={handlePosterChange} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <Bell className="w-4 h-4" /> Set Reminder
+                    </Label>
+                    <Input
+                      type="datetime-local"
+                      value={reminderDate}
+                      onChange={(e) => setReminderDate(e.target.value)}
+                      placeholder="Schedule reminder"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                    <p className="text-xs text-slate-600">AI will validate event details and suggest improvements</p>
+                  </div>
+
+                  <Button type="submit" className="w-full bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90" disabled={isCreating}>
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 animate-spin" /> Creating...
+                      </>
+                    ) : (
+                      "Create Event"
+                    )}
                   </Button>
                 </form>
               </Form>
@@ -216,6 +278,40 @@ export default function EventsPage() {
                       <MapPin className="w-4 h-4 text-primary" />
                       <span>{event.location || "TBD"}</span>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                    {event.posterUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-primary/20 hover:bg-primary/5"
+                        onClick={() => window.open(event.posterUrl || "", "_blank")}
+                      >
+                        <Image className="w-4 h-4 mr-2" />
+                        Poster
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 border-primary/20 hover:bg-primary/5"
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: event.title,
+                            text: event.description || "",
+                            url: window.location.href,
+                          }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(window.location.href);
+                          toast({ title: "Link copied!" });
+                        }
+                      }}
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

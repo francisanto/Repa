@@ -33,8 +33,8 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-20 relative z-10">
           <nav className="flex justify-between items-center mb-20">
             <h1 className="text-2xl font-bold font-display text-primary flex items-center gap-2">
-              <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center text-sm">CR</span>
-              ClassRep
+              <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center text-sm">RP</span>
+              Repa
             </h1>
             <div className="flex gap-3">
               <Link href="/login">
@@ -56,23 +56,14 @@ export default function Landing() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <motion.span 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 text-sm font-medium mb-6 shadow-lg shadow-blue-200/50"
-              >
-                ✨ Streamline Your Class Management
-              </motion.span>
               <h1 className="text-5xl md:text-7xl font-bold text-slate-900 font-display tracking-tight leading-tight">
                 Your Class. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-500">
                   Managed Beautifully.
                 </span>
               </h1>
-              <p className="text-xl text-slate-600 max-w-2xl mx-auto mt-6">
-                Seamlessly organize events, track attendance, manage timetables, and keep your class connected. 
-                Everything you need in one powerful platform.
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto mt-4">
+                Seamlessly organize events, track attendance, manage timetables, and keep your class connected.
               </p>
             </motion.div>
 
@@ -83,12 +74,12 @@ export default function Landing() {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <Link href="/events">
-                <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
+                <Button size="lg" className="rounded-full text-lg px-8 py-6 bg-gradient-to-r from-primary to-cyan-500 hover:from-primary/90 hover:to-cyan-500/90 text-white shadow-xl shadow-primary/20">
                   View Events <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
               <Link href="/events">
-                <Button size="lg" variant="secondary" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-slate-50 border border-slate-200">
+                <Button size="lg" variant="secondary" className="rounded-full text-lg px-8 py-6 bg-white hover:bg-slate-50 border-2 border-primary/20 hover:border-primary/40">
                   Check Timetable
                 </Button>
               </Link>

@@ -27,6 +27,17 @@ export const events = pgTable("events", {
   amount: integer("amount").default(0), // Amount in cents/paise
   isPaymentRequired: boolean("is_payment_required").default(false),
   organizerId: text("organizer_id").notNull(), // Links to auth user
+  posterUrl: text("poster_url"), // Event poster/image URL
+  reminderSent: boolean("reminder_sent").default(false), // Whether reminder was sent
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reminders = pgTable("reminders", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  message: text("message").notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  sent: boolean("sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,6 +74,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 export const insertRegistrationSchema = createInsertSchema(registrations).omit({ id: true, createdAt: true });
 export const insertTimetableSchema = createInsertSchema(timetables).omit({ id: true, createdAt: true });
 export const insertRepresentativeSchema = createInsertSchema(representatives).omit({ id: true, createdAt: true });
+export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 
@@ -80,6 +92,9 @@ export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
 
 export type Representative = typeof representatives.$inferSelect;
 export type InsertRepresentative = z.infer<typeof insertRepresentativeSchema>;
+
+export type Reminder = typeof reminders.$inferSelect;
+export type InsertReminder = z.infer<typeof insertReminderSchema>;
 
 // Request Types
 export type CreateStudentRequest = InsertStudent;

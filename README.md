@@ -53,10 +53,13 @@ A modern, AI-powered platform for class representatives to seamlessly organize e
 ### AI & Integrations
 - **OpenAI GPT-4o** - Timetable parsing and AI features
 - **Image Processing** - Poster uploads and management
+- **Attendance Analysis Service** - Python service with PaddleOCR and Sentence-BERT for leave letter analysis
+- **Razorpay** - Payment gateway integration
 
 ## 📋 Prerequisites
 
 - **Node.js** 18+ and npm
+- **Python 3.8+** (for attendance analysis service)
 - **PostgreSQL** (optional - app works with in-memory storage for testing)
 
 ## 🛠️ Installation
@@ -72,13 +75,23 @@ A modern, AI-powered platform for class representatives to seamlessly organize e
    npm install
    ```
 
-3. **Environment Setup** (Optional for database mode)
+3. **Environment Setup**
    ```bash
    # Create a .env file
    DATABASE_URL=postgresql://user:password@localhost:5432/repa
    SESSION_SECRET=your-secret-key-here
    PORT=5000
+   
+   # Attendance Analysis Service (Python)
+   ATTENDANCE_SERVICE_URL=http://localhost:5001
+   
+   # Razorpay Payment Gateway (Test Mode)
+   # Copy .env.example to .env and update with your keys
+   RAZORPAY_KEY_ID=rzp_test_S80fwkNsAjSEZ6
+   RAZORPAY_KEY_SECRET=O59kU61NKA7YRlkZoKrBOt33
    ```
+   
+   See [RAZORPAY_SETUP.md](./RAZORPAY_SETUP.md) for detailed Razorpay configuration.
 
 4. **Database Setup** (Optional)
    ```bash
@@ -86,15 +99,32 @@ A modern, AI-powered platform for class representatives to seamlessly organize e
    npm run db:push
    ```
 
+5. **Setup Attendance Analysis Service** (Required for leave letter analysis)
+   ```bash
+   cd attendance-service
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   python app.py
+   ```
+   
+   See [attendance-service/README.md](./attendance-service/README.md) for detailed setup.
+
 ## 🎯 Usage
 
 ### Development Mode
 
-Start the development server (uses in-memory storage by default):
+1. **Start the Attendance Analysis Service** (in a separate terminal):
+   ```bash
+   cd attendance-service
+   python app.py
+   # Or use: ./start.sh (Linux/Mac) or start.bat (Windows)
+   ```
 
-```bash
-npm run dev
-```
+2. **Start the Express.js server**:
+   ```bash
+   npm run dev
+   ```
 
 The app will be available at `http://localhost:5000`
 
@@ -177,6 +207,12 @@ Repa/
 ### Timetables
 - `GET /api/timetables` - List all timetables
 - `POST /api/timetables/upload` - Upload timetable image (AI-parsed)
+
+### Leave Letters & Attendance Analysis
+- `POST /api/leave-letters/upload` - Upload leave letter (OCR extraction)
+- `POST /api/leave-letters/analyze` - Analyze multiple leave letters (clustering & anomaly detection)
+- `GET /api/leave-letters` - List all leave letters
+- `POST /api/attendance/upload` - Upload attendance sheet
 
 ## 🎨 Features in Detail
 

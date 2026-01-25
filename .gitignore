@@ -5,3 +5,12 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+
+# Python
+attendance-service/venv/
+attendance-service/__pycache__/
+attendance-service/*.pyc
+attendance-service/.pytest_cache/
+*.pyc
+__pycache__/
+.pytest_cache/

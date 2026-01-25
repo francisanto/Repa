@@ -139,8 +139,8 @@ export async function registerRoutes(
     }
   }));
 
-  // Initialize Razorpay (default MID: S4yrsJtpeiuw2a)
-  const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "S4yrsJtpeiuw2a";
+  // Initialize Razorpay (default test key - override with RAZORPAY_KEY_ID in .env)
+  const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "rzp_test_S80fwkNsAjSEZ6";
   const razorpay = razorpayKeyId && process.env.RAZORPAY_KEY_SECRET
     ? new Razorpay({
         key_id: razorpayKeyId,
@@ -883,6 +883,30 @@ export async function registerRoutes(
   });
 
   // === LEAVE LETTERS API ===
+  // Python service URL (configurable via environment variable)
+  const ATTENDANCE_SERVICE_URL = process.env.ATTENDANCE_SERVICE_URL || "http://localhost:5001";
+
+  // Helper function to call Python attendance service
+  async function callAttendanceService(endpoint: string, data: any) {
+    try {
+      const response = await fetch(`${ATTENDANCE_SERVICE_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Service unavailable" }));
+        throw new Error(error.error || `Service returned ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error: any) {
+      console.error(`Attendance service error (${endpoint}):`, error);
+      throw error;
+    }
+  }
+
   app.post("/api/leave-letters/upload", async (req, res) => {
     try {
       const { studentName, date, image } = req.body;
@@ -891,34 +915,26 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Leave letter image is required" });
       }
 
-      // Use AI to extract and classify leave letter
-      const openai = getOpenAI();
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `Analyze the leave letter image. Extract: student name, date, reason, and classify category (medical, emergency, personal, academic, other). Output JSON: {"studentName": "...", "date": "...", "reason": "...", "category": "..."}`
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract all information from this leave letter and classify it." },
-              { type: "image_url", image_url: { url: image, detail: "high" } }
-            ]
-          }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.1,
+      // Call Python service for OCR and extraction
+      const result = await callAttendanceService("/api/process-leave-letter", {
+        file: image
       });
 
-      const extracted = JSON.parse(response.choices[0]?.message?.content || "{}");
+      if (!result.success) {
+        throw new Error(result.error || "Failed to process leave letter");
+      }
 
+      const extracted = result.data;
+
+      // Store leave letter in database
+      // Note: This would use the leaveLetters table from schema-attendance.ts
+      // For now, we'll return the extracted data
       res.status(201).json({
-        studentName: extracted.studentName || studentName,
+        studentName: extracted.student_name || studentName,
+        rollNumber: extracted.roll_number || null,
         date: extracted.date || date || new Date().toISOString(),
         reason: extracted.reason || "Not specified",
-        category: extracted.category || "other",
+        rawText: extracted.raw_text,
         imageUrl: image,
       });
     } catch (error: any) {
@@ -927,9 +943,40 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/leave-letters/analyze", async (req, res) => {
+    try {
+      const { leave_letters } = req.body;
+      
+      if (!leave_letters || !Array.isArray(leave_letters) || leave_letters.length === 0) {
+        return res.status(400).json({ message: "leave_letters array is required" });
+      }
+
+      // Call Python service for analysis
+      const result = await callAttendanceService("/api/analyze-leave-letters", {
+        leave_letters
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to analyze leave letters");
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Leave letters analysis error:", error);
+      res.status(500).json({ message: error.message || "Failed to analyze leave letters" });
+    }
+  });
+
   app.get("/api/leave-letters", async (req, res) => {
-    // Return all leave letters (mock for now)
-    res.json([]);
+    try {
+      // Return all leave letters from storage
+      // This would query the leaveLetters table
+      // For now, return empty array (to be implemented with storage)
+      res.json([]);
+    } catch (error: any) {
+      console.error("Get leave letters error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch leave letters" });
+    }
   });
 
   app.get("/api/attendance", async (req, res) => {

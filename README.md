@@ -76,22 +76,30 @@ A modern, AI-powered platform for class representatives to seamlessly organize e
    ```
 
 3. **Environment Setup**
+   
+   Copy `.env.example` to `.env` and update with your configuration:
    ```bash
-   # Create a .env file
-   DATABASE_URL=postgresql://user:password@localhost:5432/repa
-   SESSION_SECRET=your-secret-key-here
+   cp .env.example .env
+   ```
+   
+   Or create a `.env` file manually with:
+   ```bash
+   # Express.js Server
    PORT=5000
+   SESSION_SECRET=your-secret-key-here
+   DATABASE_URL=postgresql://user:password@localhost:5432/repa
    
    # Attendance Analysis Service (Python)
    ATTENDANCE_SERVICE_URL=http://localhost:5001
    
    # Razorpay Payment Gateway (Test Mode)
-   # Copy .env.example to .env and update with your keys
+   # Get test keys from: https://dashboard.razorpay.com (Test Mode)
    RAZORPAY_KEY_ID=rzp_test_S80fwkNsAjSEZ6
    RAZORPAY_KEY_SECRET=O59kU61NKA7YRlkZoKrBOt33
-   ```
    
-   See [RAZORPAY_SETUP.md](./RAZORPAY_SETUP.md) for detailed Razorpay configuration.
+   # OpenAI API (Optional)
+   AI_INTEGRATIONS_OPENAI_API_KEY=your-openai-api-key
+   ```
 
 4. **Database Setup** (Optional)
    ```bash
@@ -108,7 +116,7 @@ A modern, AI-powered platform for class representatives to seamlessly organize e
    python app.py
    ```
    
-   See [attendance-service/README.md](./attendance-service/README.md) for detailed setup.
+   The service will start on port 5001. Ensure it's running before starting the Express.js server.
 
 ## 🎯 Usage
 
@@ -160,22 +168,30 @@ The app supports two storage modes:
 
 ```
 Repa/
-├── client/                 # Frontend React application
+├── attendance-service/      # Python AI service for attendance analysis
+│   ├── app.py              # Flask application
+│   ├── requirements.txt    # Python dependencies
+│   ├── start.sh            # Linux/Mac startup script
+│   └── start.bat           # Windows startup script
+├── client/                  # Frontend React application
 │   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── hooks/         # Custom React hooks
-│   │   ├── pages/         # Page components
-│   │   └── lib/           # Utilities
-│   └── public/            # Static assets
-├── server/                 # Backend Express application
-│   ├── routes.ts          # API routes
-│   ├── storage.ts         # Storage abstraction
-│   ├── memory-storage.ts  # In-memory storage implementation
+│   │   ├── components/     # Reusable UI components
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── pages/          # Page components
+│   │   └── lib/            # Utilities
+│   └── public/             # Static assets
+├── server/                  # Backend Express application
+│   ├── routes.ts           # API routes
+│   ├── storage.ts          # Storage abstraction
+│   ├── memory-storage.ts   # In-memory storage implementation
 │   └── replit_integrations/ # Integrations
-├── shared/                 # Shared code between client and server
-│   ├── schema.ts          # Database schema
-│   └── routes.ts          # API route definitions
-└── script/                 # Build scripts
+├── shared/                  # Shared code between client and server
+│   ├── schema.ts           # Database schema
+│   ├── schema-attendance.ts # Attendance schema
+│   └── routes.ts           # API route definitions
+├── script/                 # Build scripts
+├── .env.example            # Environment variables template
+└── README.md               # This file
 ```
 
 ## 🔌 API Endpoints
@@ -238,6 +254,19 @@ Repa/
 - Interactive timetable view
 - Live timetable indicators
 - Class reminders
+
+### Attendance Analysis & Leave Letter Processing
+- Upload leave letters (images/PDFs) with automatic OCR extraction
+- AI-powered semantic analysis using Sentence-BERT
+- Automatic clustering of similar leave reasons
+- Anomaly detection:
+  - Highly similar or copied reasons
+  - Repeated excuses by same student
+  - Large groups with same reason on same date
+  - Vague or generic reasons
+- Risk level assessment (low/medium/high)
+- Manual review and approval workflow
+- Comprehensive insights and statistics
 
 ### Authentication
 - Simple ID/password authentication

@@ -69,6 +69,38 @@ function commonPrefixLength(s1: string, s2: string, maxLength: number): number {
   return prefix;
 }
 
+// Levenshtein distance calculation
+function levenshtein(s1: string, s2: string): number {
+  const len1 = s1.length;
+  const len2 = s2.length;
+  const matrix: number[][] = [];
+
+  // Initialize matrix
+  for (let i = 0; i <= len1; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= len2; j++) {
+    matrix[0][j] = j;
+  }
+
+  // Fill matrix
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      if (s1[i - 1] === s2[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,     // deletion
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j - 1] + 1  // substitution
+        );
+      }
+    }
+  }
+
+  return matrix[len1][len2];
+}
+
 // Enhanced name matching with multiple algorithms
 function findBestMatch(inputName: string, students: any[]): { student: any; score: number; method: string } | null {
   const normalizedInput = inputName.toLowerCase().trim();
@@ -893,6 +925,7 @@ export async function registerRoutes(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(60000), // 60 second timeout
       });
       
       if (!response.ok) {
@@ -903,6 +936,9 @@ export async function registerRoutes(
       return await response.json();
     } catch (error: any) {
       console.error(`Attendance service error (${endpoint}):`, error);
+      if (error.name === 'AbortError' || error.code === 'ECONNREFUSED') {
+        throw new Error("Attendance analysis service is not running. Please start it on port 5001.");
+      }
       throw error;
     }
   }
